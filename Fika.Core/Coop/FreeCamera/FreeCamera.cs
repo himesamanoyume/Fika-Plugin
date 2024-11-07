@@ -85,29 +85,29 @@ namespace Fika.Core.Coop.FreeCamera
 		{
 			if (IsActive && showOverlay)
 			{
-				string visionText = "Enable nightvision";
+				string visionText = "开启夜视";
 
 				if (nightVision != null && nightVision.On)
 				{
-					visionText = "Enable thermals";
+					visionText = "开启热成像";
 				}
 
 				if (thermalVision != null && thermalVision.On)
 				{
-					visionText = "Disable thermals";
+					visionText = "关闭热成像";
 				}
 
 				GUILayout.BeginArea(new Rect(5, 5, 800, 800));
 				GUILayout.BeginVertical();
 
-				GUILayout.Label($"Left/Right Mouse Button: Jump between players");
-				GUILayout.Label($"CTRL + Left/Right Mouse Button: Jump and spectate in 3rd person");
-				GUILayout.Label($"Spacebar + Left/Right Mouse Button: Jump and spectate in head cam");
-				GUILayout.Label($"T: Teleport to cam position");
+				GUILayout.Label($"鼠标左/右键: 玩家间跳转");
+				GUILayout.Label($"CTRL + 鼠标左/右键: 以第三人称跳转观看");
+				GUILayout.Label($"空格 + 鼠标左/右键: 以头部摄像机视角观看");
+				GUILayout.Label($"T: 传送到摄像机位置");
 				GUILayout.Label($"N: {visionText}");
-				GUILayout.Label($"M: Disable culling");
-				GUILayout.Label($"HOME: {(disableInput ? "Enable Input" : "Disable Input")}");
-				GUILayout.Label($"Shift + Ctrl: Turbo Speed");
+				GUILayout.Label($"M: 关闭物体剔除");
+				GUILayout.Label($"HOME: {(disableInput ? "启用输入" : "禁用输入")}");
+				GUILayout.Label($"Shift + Ctrl: 加速");
 
 				GUILayout.EndVertical();
 				GUILayout.EndArea();
