@@ -20,8 +20,8 @@ namespace Fika.Core.UI.Patches
 		private static bool PrefixChange(TextMeshProUGUI ____buttonLabel, TextMeshProUGUI ____buttonDescription, Image ____buttonDescriptionIcon,
 			GameObject ____availableState)
 		{
-			____buttonLabel.text = "PvE";
-			____buttonDescription.text = $"Fika will always be {ColorizeText(Colors.BLUE, "PvE")}";
+			____buttonLabel.text = "Miyako";
+			____buttonDescription.text = $"{ColorizeText(Colors.BLUE, "Miyako")} Tarkov By 姫様の夢";
 			____buttonDescriptionIcon.gameObject.SetActive(false);
 			____availableState.SetActive(true);
 			return false;

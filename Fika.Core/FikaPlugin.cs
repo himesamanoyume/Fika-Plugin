@@ -49,7 +49,7 @@ namespace Fika.Core
 	/// Originally by: Paulov <br/>
 	/// Re-written by: Lacyway
 	/// </summary>
-	[BepInPlugin("com.fika.core", "Fika.Core", "0.9.9015")]
+	[BepInPlugin("com.fika.core", "姫様の夢汉化 Fika.Core", "0.9.9015")]
 	[BepInProcess("EscapeFromTarkov.exe")]
 	[BepInDependency("com.SPT.custom", BepInDependency.DependencyFlags.HardDependency)] // This is used so that we guarantee to load after spt-custom, that way we can disable its patches
 	[BepInDependency("com.SPT.singleplayer", BepInDependency.DependencyFlags.HardDependency)] // This is used so that we guarantee to load after spt-singleplayer, that way we can disable its patches
@@ -336,236 +336,237 @@ namespace Fika.Core
 		}
 
 		private void SetupConfig()
-		{
-			// Hidden
+        {
+            // Hidden
 
-			AcceptedTOS = Config.Bind("Hidden", "Accepted TOS", false,
-				new ConfigDescription("Has accepted TOS", tags: new ConfigurationManagerAttributes() { Browsable = false }));
+            AcceptedTOS = Config.Bind("隐藏", "已接受条款", false,
+                new ConfigDescription("已接受服务条款", tags: new ConfigurationManagerAttributes() { Browsable = false }));
 
-			// Advanced
+            // Advanced
 
-			OfficialVersion = Config.Bind("Advanced", "Official Version", false,
-				new ConfigDescription("Show official version instead of Fika version.", tags: new ConfigurationManagerAttributes() { IsAdvanced = true }));
+            OfficialVersion = Config.Bind("进阶", "官方版本", false,
+                new ConfigDescription("显示官方版本而非 Fika 版本", tags: new ConfigurationManagerAttributes() { IsAdvanced = true }));
 
-			DisableSPTAIPatches = Config.Bind("Advanced", "Disable SPT AI Patches", false,
-				new ConfigDescription("Disable SPT AI patches that are most likely redundant in Fika.", tags: new ConfigurationManagerAttributes { IsAdvanced = true }));
+            DisableSPTAIPatches = Config.Bind("进阶", "禁用 SPT AI 补丁", false,
+                new ConfigDescription("禁用 Fika 中有可能'多余'的 SPT AI 补丁", tags: new ConfigurationManagerAttributes { IsAdvanced = true }));
 
-			// Coop
+            // Coop
 
-			ShowNotifications = Instance.Config.Bind("Coop", "Show Feed", true,
-				new ConfigDescription("Enable custom notifications when a player dies, extracts, kills a boss, etc.", tags: new ConfigurationManagerAttributes() { Order = 7 }));
+            ShowNotifications = Instance.Config.Bind("2.联机", "显示通知", true,
+                new ConfigDescription("启用自定义通知，当玩家死亡、提取、击杀boss等时显示", tags: new ConfigurationManagerAttributes() { Order = 7 }));
 
-			AutoExtract = Config.Bind("Coop", "Auto Extract", false,
-				new ConfigDescription("Automatically extracts after the extraction countdown. As a host, this will only work if there are no clients connected.", tags: new ConfigurationManagerAttributes() { Order = 6 }));
+            AutoExtract = Config.Bind("联机", "自动撤离", false,
+                new ConfigDescription("在撤离倒计时结束后自动撤离。只在没有客户端连接时且作为主机时有效", tags: new ConfigurationManagerAttributes() { Order = 6 }));
 
-			ShowExtractMessage = Config.Bind("Coop", "Show Extract Message", true,
-				new ConfigDescription("Whether to show the extract message after dying/extracting.", tags: new ConfigurationManagerAttributes() { Order = 5 }));
+            ShowExtractMessage = Config.Bind("联机", "显示 撤离信息", true,
+                new ConfigDescription("是否在死亡/撤离后显示消息", tags: new ConfigurationManagerAttributes() { Order = 5 }));
 
-			ExtractKey = Config.Bind("Coop", "Extract Key", new KeyboardShortcut(KeyCode.F8),
-				new ConfigDescription("The key used to extract from the raid.", tags: new ConfigurationManagerAttributes() { Order = 2 }));
+            ExtractKey = Config.Bind("联机", "撤离 按键", new KeyboardShortcut(KeyCode.F8),
+                new ConfigDescription("用于从战局中撤离的按键", tags: new ConfigurationManagerAttributes() { Order = 2 }));
 
-			EnableChat = Config.Bind("Coop", "Enable Chat", false,
-				new ConfigDescription("Toggle to enable chat in game. Cannot be change mid raid", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+            EnableChat = Config.Bind("联机", "启用 聊天", false,
+                new ConfigDescription("切换以启用游戏内聊天。不能在战局中更改", tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
-			ChatKey = Config.Bind("Coop", "Chat Key", new KeyboardShortcut(KeyCode.RightControl),
-				new ConfigDescription("The key used to open the chat window.", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+            ChatKey = Config.Bind("联机", "聊天 按键", new KeyboardShortcut(KeyCode.RightControl),
+                new ConfigDescription("打开聊天窗口的按键", tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
-			// Coop | Name Plates
+            // Coop | Name Plates
 
-			UseNamePlates = Config.Bind("Coop | Name Plates", "Show Player Name Plates", false,
-				new ConfigDescription("Toggle Health-Bars & Names.", tags: new ConfigurationManagerAttributes() { Order = 13 }));
+            UseNamePlates = Config.Bind("联机 | 铭牌显示", "显示玩家 铭牌", false,
+                new ConfigDescription("是否显示 玩家名称&血条", tags: new ConfigurationManagerAttributes() { Order = 13 }));
 
-			HideHealthBar = Config.Bind("Coop | Name Plates", "Hide Health Bar", false,
-				new ConfigDescription("Completely hides the health bar.", tags: new ConfigurationManagerAttributes() { Order = 12 }));
+            HideHealthBar = Config.Bind("联机 | 铭牌显示", "隐藏 血条", false,
+                new ConfigDescription("完全隐藏玩家血条", tags: new ConfigurationManagerAttributes() { Order = 12 }));
 
-			UseHealthNumber = Config.Bind("Coop | Name Plates", "Show HP% instead of bar", false,
-				new ConfigDescription("Shows health in % amount instead of using the bar.", tags: new ConfigurationManagerAttributes() { Order = 11 }));
+            UseHealthNumber = Config.Bind("联机 | 铭牌显示", "显示 血量百分比%", false,
+                new ConfigDescription("显示血量的百分比%而不是显示血条", tags: new ConfigurationManagerAttributes() { Order = 11 }));
 
-			ShowEffects = Config.Bind("Coop | Name Plates", "Show Effects", true,
-				new ConfigDescription("If status effects should be displayed below the health bar.", tags: new ConfigurationManagerAttributes() { Order = 10 }));
+            ShowEffects = Config.Bind("联机 | 铭牌显示", "显示 状态效果", true,
+                new ConfigDescription("开启后，会在玩家血条下方展示当前的状态效果", tags: new ConfigurationManagerAttributes() { Order = 10 }));
 
-			UsePlateFactionSide = Config.Bind("Coop | Name Plates", "Show Player Faction Icon", true,
-				new ConfigDescription("Shows the player faction icon next to the HP bar.", tags: new ConfigurationManagerAttributes() { Order = 9 }));
+            UsePlateFactionSide = Config.Bind("联机 | 铭牌显示", "显示 玩家阵营", true,
+                new ConfigDescription("开启后，会在玩家血条边上显示玩家的所属阵营", tags: new ConfigurationManagerAttributes() { Order = 9 }));
 
-			HideNamePlateInOptic = Config.Bind("Coop | Name Plates", "Hide Name Plate in Optic", true,
-				new ConfigDescription("Hides the name plate when viewing through PiP scopes.", tags: new ConfigurationManagerAttributes() { Order = 8 }));
+            HideNamePlateInOptic = Config.Bind("联机 | 铭牌显示", "使用 瞄准镜 使隐藏铭牌", true,
+                new ConfigDescription("在通过 瞄准镜 查看时隐藏铭牌", tags: new ConfigurationManagerAttributes() { Order = 8 }));
 
-			NamePlateUseOpticZoom = Config.Bind("Coop | Name Plates", "Name Plates Use Optic Zoom", true,
-				new ConfigDescription("If name plate location should be displayed using the PiP optic camera.", tags: new ConfigurationManagerAttributes() { Order = 7, IsAdvanced = true }));
+            NamePlateUseOpticZoom = Config.Bind("联机 | 铭牌显示", "铭牌使用 瞄准镜 缩放", true,
+                new ConfigDescription("是否在使用瞄准镜时缩放显示铭牌", tags: new ConfigurationManagerAttributes() { Order = 7, IsAdvanced = true }));
 
-			DecreaseOpacityNotLookingAt = Config.Bind("Coop | Name Plates", "Decrease Opacity In Peripheral", true,
-				new ConfigDescription("Decreases the opacity of the name plates when not looking at a player.", tags: new ConfigurationManagerAttributes() { Order = 6 }));
+            DecreaseOpacityNotLookingAt = Config.Bind("联机 | 铭牌显示", "未注视时降低透明度", true,
+                new ConfigDescription("当未注视玩家时，降低铭牌的透明度", tags: new ConfigurationManagerAttributes() { Order = 6 }));
 
-			NamePlateScale = Config.Bind("Coop | Name Plates", "Name Plate Scale", 0.22f,
-				new ConfigDescription("Size of the name plates", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 5 }));
+            NamePlateScale = Config.Bind("联机 | 铭牌显示", "铭牌比例", 0.22f,
+                new ConfigDescription("铭牌的大小", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 5 }));
 
-			OpacityInADS = Config.Bind("Coop | Name Plates", "Opacity in ADS", 0.75f,
-				new ConfigDescription("The opacity of the name plates when aiming down sights.", new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes() { Order = 4 }));
+            OpacityInADS = Config.Bind("联机 | 铭牌显示", "瞄准时透明度", 0.75f,
+                new ConfigDescription("瞄准时铭牌的透明度", new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes() { Order = 4 }));
 
-			MaxDistanceToShow = Config.Bind("Coop | Name Plates", "Max Distance to Show", 500f,
-				new ConfigDescription("The maximum distance at which name plates will become invisible, starts to fade at half the input value.", new AcceptableValueRange<float>(10f, 1000f), new ConfigurationManagerAttributes() { Order = 3 }));
+            MaxDistanceToShow = Config.Bind("联机 | 铭牌显示", "铭牌显示的最大距离", 500f,
+                new ConfigDescription("铭牌将变得不可见的最大距离，开始在输入值的一半处逐渐消失", new AcceptableValueRange<float>(10f, 1000f), new ConfigurationManagerAttributes() { Order = 3 }));
 
-			MinimumOpacity = Config.Bind("Coop | Name Plates", "Minimum Opacity", 0.1f,
-				new ConfigDescription("The minimum opacity of the name plates.", new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 2 }));
+            MinimumOpacity = Config.Bind("联机 | 铭牌显示", "最小 铭牌透明度", 0.1f,
+                new ConfigDescription("铭牌的最小透明度", new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 2 }));
 
-			MinimumNamePlateScale = Config.Bind("Coop | Name Plates", "Minimum Name Plate Scale", 0.01f,
-				new ConfigDescription("The minimum scale of the name plates.", new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 1 }));
+            MinimumNamePlateScale = Config.Bind("联机 | 铭牌显示", "最小 铭牌比例", 0.01f,
+                new ConfigDescription("铭牌的最小比例", new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 1 }));
 
-			UseOcclusion = Config.Bind("Coop | Name Plates", "Use Occlusion", false,
-				new ConfigDescription("Use occlusion to hide the name plate when the player is out of sight.", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+            UseOcclusion = Config.Bind("联机 | 铭牌显示", "使用遮挡", false,
+                new ConfigDescription("当玩家不在视线范围内时，使用遮挡来隐藏铭牌", tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
-			// Coop | Quest Sharing
+            // Coop | Quest Sharing
 
-			QuestTypesToShareAndReceive = Config.Bind("Coop | Quest Sharing", "Quest Types", EQuestSharingTypes.All,
-				new ConfigDescription("Which quest types to receive and send. PlaceBeacon is both markers and items.", tags: new ConfigurationManagerAttributes() { Order = 2 }));
+            QuestTypesToShareAndReceive = Config.Bind("联机 | 任务共享", "任务类型", EQuestSharingTypes.All,
+                new ConfigDescription("选择能够共享的任务类型。\nKill - 击杀\nItem - 寻找物品\nLocation - 位置踩点\nPlaceBeacon - 放置标记：既包括标记也包括放置物品", tags: new ConfigurationManagerAttributes() { Order = 2 }));
 
-			QuestSharingNotifications = Config.Bind("Coop | Quest Sharing", "Show Notifications", true,
-				new ConfigDescription("If a notification should be shown when quest progress is shared with out.", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+            QuestSharingNotifications = Config.Bind("联机 | 任务共享", "显示通知", true,
+                new ConfigDescription("是否在任务进度共享时显示通知", tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
-			EasyKillConditions = Config.Bind("Coop | Quest Sharing", "Easy Kill Conditions", false,
-				new ConfigDescription("Enables easy kill conditions. When this is used, any time a friendly player kills something, it treats it as if you killed it for your quests as long as all conditions are met.\nThis can be inconsistent and does not always work.", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+            EasyKillConditions = Config.Bind("联机 | 任务共享", "共享击杀进度", false,
+                new ConfigDescription("启用简化击杀条件。当启用时，每当友方玩家击杀敌人时，将被视为自己任务进度所杀", tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
-			// Coop | Custom
+            // Coop | Custom
 
-			UsePingSystem = Config.Bind("Coop | Custom", "Ping System", false,
-				new ConfigDescription("Toggle Ping System. If enabled you can receive and send pings by pressing the ping key.", tags: new ConfigurationManagerAttributes() { Order = 9 }));
+            UsePingSystem = Config.Bind("联机 | 自定义", "启用标点标记", false,
+                new ConfigDescription("启用标点系统。开启后，您可以通过按下标点键来接收和发送标点", tags: new ConfigurationManagerAttributes() { Order = 9 }));
 
-			PingButton = Config.Bind("Coop | Custom", "Ping Button", new KeyboardShortcut(KeyCode.U),
-				new ConfigDescription("Button used to send pings.", tags: new ConfigurationManagerAttributes() { Order = 8 }));
+            PingButton = Config.Bind("联机 | 自定义", "标点 按键", new KeyboardShortcut(KeyCode.U),
+                new ConfigDescription("用于发送标点的按键", tags: new ConfigurationManagerAttributes() { Order = 8 }));
 
-			PingColor = Config.Bind("Coop | Custom", "Ping Color", Color.white,
-				new ConfigDescription("The color of your pings when displayed for other players.", tags: new ConfigurationManagerAttributes() { Order = 7 }));
+            PingColor = Config.Bind("联机 | 自定义", "标点颜色", Color.white,
+                new ConfigDescription("标点在其他玩家屏幕上的颜色", tags: new ConfigurationManagerAttributes() { Order = 7 }));
 
-			PingSize = Config.Bind("Coop | Custom", "Ping Size", 1f,
-				new ConfigDescription("The multiplier of the ping size.", new AcceptableValueRange<float>(0.1f, 2f), new ConfigurationManagerAttributes() { Order = 6 }));
+            PingSize = Config.Bind("联机 | 自定义", "标点大小", 1f,
+                new ConfigDescription("标点图标大小倍率", new AcceptableValueRange<float>(0.1f, 2f), new ConfigurationManagerAttributes() { Order = 6 }));
 
-			PingTime = Config.Bind("Coop | Custom", "Ping Time", 3,
-				new ConfigDescription("How long pings should be displayed.", new AcceptableValueRange<int>(2, 10), new ConfigurationManagerAttributes() { Order = 5 }));
+            PingTime = Config.Bind("联机 | 自定义", "标点显示时间", 3,
+                new ConfigDescription("标点显示的时长", new AcceptableValueRange<int>(2, 10), new ConfigurationManagerAttributes() { Order = 5 }));
 
-			PlayPingAnimation = Config.Bind("Coop | Custom", "Play Ping Animation", false,
-				new ConfigDescription("Plays the pointing animation automatically when pinging. Can interfere with gameplay.", tags: new ConfigurationManagerAttributes() { Order = 4 }));
+            PlayPingAnimation = Config.Bind("联机 | 自定义", "播放标点动画", false,
+                new ConfigDescription("当发送标点时自动播放指示动画。可能会影响游戏体验", tags: new ConfigurationManagerAttributes() { Order = 4 }));
 
-			ShowPingDuringOptics = Config.Bind("Coop | Custom", "Show Ping During Optics", false,
-				new ConfigDescription("If pings should be displayed while aiming down an optics scope.", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+            ShowPingDuringOptics = Config.Bind("联机 | 自定义", "瞄准镜中显示标点", false,
+                new ConfigDescription("是否在瞄准镜视野中显示标点", tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
-			PingUseOpticZoom = Config.Bind("Coop | Custom", "Ping Use Optic Zoom", true,
-				new ConfigDescription("If ping location should be displayed using the PiP optic camera.", tags: new ConfigurationManagerAttributes() { Order = 2, IsAdvanced = true }));
+            PingUseOpticZoom = Config.Bind("联机 | 自定义", "标点在瞄准镜时缩放", true,
+                new ConfigDescription("标点位置是否应使用瞄准镜时显示", tags: new ConfigurationManagerAttributes() { Order = 2, IsAdvanced = true }));
 
-			PingScaleWithDistance = Config.Bind("Coop | Custom", "Ping Scale With Distance", true,
-				new ConfigDescription("If ping size should scale with distance from player.", tags: new ConfigurationManagerAttributes() { Order = 1, IsAdvanced = true }));
+            PingScaleWithDistance = Config.Bind("联机 | 自定义", "标点随距离缩放", true,
+                new ConfigDescription("标点大小是否应随距离从玩家缩放", tags: new ConfigurationManagerAttributes() { Order = 1, IsAdvanced = true }));
 
-			PingMinimumOpacity = Config.Bind("Coop | Custom", "Ping Minimum Opacity", 0.05f,
-				new ConfigDescription("The minimum opacity of pings when looking straight at them.", new AcceptableValueRange<float>(0f, 0.5f), new ConfigurationManagerAttributes() { Order = 0, IsAdvanced = true }));
+            PingMinimumOpacity = Config.Bind("联机 | 自定义", "标点最小透明度", 0.05f,
+                new ConfigDescription("标点大小是否应随距离从玩家缩放", new AcceptableValueRange<float>(0f, 0.5f), new ConfigurationManagerAttributes() { Order = 0, IsAdvanced = true }));
+            
+            PingSound = Config.Bind("联机 | 自定义", "标点音效", EPingSound.SubQuestComplete,
+                new ConfigDescription("标点时播放的音效"));
 
-			PingSound = Config.Bind("Coop | Custom", "Ping Sound", EPingSound.SubQuestComplete,
-				new ConfigDescription("The audio that plays on ping"));
+            // Coop | Debug
 
-			// Coop | Debug
+            FreeCamButton = Config.Bind("联机 | 调试Debug", "自由视角 按键", new KeyboardShortcut(KeyCode.F9),
+                "用于切换自由视角的按键");
 
-			FreeCamButton = Config.Bind("Coop | Debug", "Free Camera Button", new KeyboardShortcut(KeyCode.F9),
-				"Button used to toggle free camera.");
+            AZERTYMode = Config.Bind("联机 | 调试Debug", "AZERTY模式(法式键位)", false,
+                "如果自由视角应该使用AZERTY键盘布局进行输入");
 
-			AZERTYMode = Config.Bind("Coop | Debug", "AZERTY Mode", false,
-				"If free camera should use AZERTY keys for input.");
+            KeybindOverlay = Config.Bind("联机 | 调试Debug", "按键绑定叠加", true,
+                "是否显示包含所有自由视角按键绑定的叠加层");
 
-			KeybindOverlay = Config.Bind("Coop | Debug", "Keybind Overlay", true,
-				"If an overlay with all free cam keybinds should show.");
+            // Performance
 
-			// Performance
+            DynamicAI = Config.Bind("性能", "动态AI", false,
+                new ConfigDescription("使用动态AI系统，在AI位于任何玩家范围之外时禁用AI", tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
-			DynamicAI = Config.Bind("Performance", "Dynamic AI", false,
-				new ConfigDescription("Use the dynamic AI system, disabling AI when they are outside of any player's range.", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+            DynamicAIRange = Config.Bind("性能", "动态AI 范围", 100f,
+                new ConfigDescription("动态禁用AI的范围", new AcceptableValueRange<float>(150f, 1000f), new ConfigurationManagerAttributes() { Order = 2 }));
 
-			DynamicAIRange = Config.Bind("Performance", "Dynamic AI Range", 100f,
-				new ConfigDescription("The range at which AI will be disabled dynamically.", new AcceptableValueRange<float>(150f, 1000f), new ConfigurationManagerAttributes() { Order = 2 }));
+            DynamicAIRate = Config.Bind("性能", "动态AI 扫描频率", EDynamicAIRates.Medium,
+                new ConfigDescription("动态AI扫描所有玩家范围的频率", tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
-			DynamicAIRate = Config.Bind("Performance", "Dynamic AI Rate", EDynamicAIRates.Medium,
-				new ConfigDescription("How often DynamicAI should scan for the range from all players.", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+            DynamicAIIgnoreSnipers = Config.Bind("性能", "动态AI - 忽略狙击手", true,
+                new ConfigDescription("是否动态AI应该忽略狙击手", tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
-			DynamicAIIgnoreSnipers = Config.Bind("Performance", "Dynamic AI - Ignore Snipers", true,
-				new ConfigDescription("Whether Dynamic AI should ignore sniper scavs.", tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
-			// Performance | Max Bots
+            // Performance | Max Bots
 
-			EnforcedSpawnLimits = Config.Bind("Performance | Max Bots", "Enforced Spawn Limits", false,
-				new ConfigDescription("Enforces spawn limits when spawning bots, making sure to not go over the vanilla limits. This mainly takes affect when using spawn mods or anything that modifies the bot limits. Will not block spawns of special bots like bosses.", tags: new ConfigurationManagerAttributes() { Order = 14 }));
+            EnforcedSpawnLimits = Config.Bind("性能 | AI上限", "强制生成限制", false,
+                new ConfigDescription("当生成AI时，强制执行生成限制，确保不超过原版限制。主要在使用生成模组或修改AI限制的情况下生效。不会阻止特殊AI的生成，例如Boss", tags: new ConfigurationManagerAttributes() { Order = 14 }));
 
-			DespawnFurthest = Config.Bind("Performance | Max Bots", "Despawn Furthest", false,
-				new ConfigDescription("When enforcing spawn limits, should the furthest bot be de-spawned instead of blocking the spawn. This will make for a much more active raid on a lower Max Bots count. Helpful for weaker PCs. Will only despawn pmcs and scavs. If you don't run a dynamic spawn mod, this will however quickly exhaust the spawns on the map, making the raid very dead instead.", tags: new ConfigurationManagerAttributes() { Order = 13 }));
+            DespawnFurthest = Config.Bind("性能 | AI上限", "优先消失最远的AI", false,
+                new ConfigDescription("在强制生成限制时，是否让最远的AI消失，而不是阻止生成。这将使低最大AI数量的战局更活跃。对性能较差的PC有帮助。\n不过，如果没有动态生成模组，这可能会迅速耗尽地图上的生成点，使战局变得十分冷清", tags: new ConfigurationManagerAttributes() { Order = 13 }));
 
-			DespawnMinimumDistance = Config.Bind("Performance | Max Bots", "Despawn Minimum Distance", 200.0f,
-				new ConfigDescription("Don't despawn bots within this distance.", new AcceptableValueRange<float>(50f, 3000f), new ConfigurationManagerAttributes() { Order = 12 }));
+            DespawnMinimumDistance = Config.Bind("性能 | AI上限", "最小消失距离", 200.0f,
+                new ConfigDescription("在此距离内AI不会消失", new AcceptableValueRange<float>(50f, 3000f), new ConfigurationManagerAttributes() { Order = 12 }));
 
-			MaxBotsFactory = Config.Bind("Performance | Max Bots", "Max Bots Factory", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Factory. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 11 }));
+            MaxBotsFactory = Config.Bind("性能 | AI上限", "AI上限 - 工厂", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 11 }));
 
-			MaxBotsCustoms = Config.Bind("Performance | Max Bots", "Max Bots Customs", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Customs. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 10 }));
+            MaxBotsCustoms = Config.Bind("性能 | AI上限", "AI上限 - 海关", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 10 }));
 
-			MaxBotsInterchange = Config.Bind("Performance | Max Bots", "Max Bots Interchange", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Interchange. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 8 }));
+            MaxBotsInterchange = Config.Bind("性能 | AI上限", "AI上限 - 立交桥", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 8 }));
 
-			MaxBotsReserve = Config.Bind("Performance | Max Bots", "Max Bots Reserve", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Reserve. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 7 }));
+            MaxBotsReserve = Config.Bind("性能 | AI上限", "AI上限 - 储备站", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 7 }));
 
-			MaxBotsWoods = Config.Bind("Performance | Max Bots", "Max Bots Woods", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Woods. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 6 }));
+            MaxBotsWoods = Config.Bind("性能 | AI上限", "AI上限 - 森林", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 6 }));
 
-			MaxBotsShoreline = Config.Bind("Performance | Max Bots", "Max Bots Shoreline", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Shoreline. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 5 }));
+            MaxBotsShoreline = Config.Bind("性能 | AI上限", "AI上限 - 海岸线", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 5 }));
 
-			MaxBotsStreets = Config.Bind("Performance | Max Bots", "Max Bots Streets", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Streets of Tarkov. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 4 }));
+            MaxBotsStreets = Config.Bind("性能 | AI上限", "AI上限 - 塔科夫街区", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 4 }));
 
-			MaxBotsGroundZero = Config.Bind("Performance | Max Bots", "Max Bots Ground Zero", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Ground Zero. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 3 }));
+            MaxBotsGroundZero = Config.Bind("性能 | AI上限", "AI上限 - 市中心", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 3 }));
 
-			MaxBotsLabs = Config.Bind("Performance | Max Bots", "Max Bots Labs", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Labs. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 2 }));
+            MaxBotsLabs = Config.Bind("性能 | AI上限", "AI上限 - 实验室", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 2 }));
 
-			MaxBotsLighthouse = Config.Bind("Performance | Max Bots", "Max Bots Lighthouse", 0,
-				new ConfigDescription("Max amount of bots that can be active at the same time on Lighthouse. Useful if you have a weaker PC. Set to 0 to use vanilla limits. Cannot be changed during a raid.", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 1 }));
+            MaxBotsLighthouse = Config.Bind("性能 | AI上限", "AI上限 - 灯塔", 0,
+                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 1 }));
 
-			// Network
+            // Network
 
-			NativeSockets = Config.Bind(section: "Network", "Native Sockets", true,
-				new ConfigDescription("Use NativeSockets for gameplay traffic. This uses direct socket calls for send/receive to drastically increase speed and reduce GC pressure. Only for Windows/Linux and might not always work.", tags: new ConfigurationManagerAttributes() { Order = 8 }));
+            NativeSockets = Config.Bind(section: "网络", "本地套接字(Native Sockets)", false,
+                new ConfigDescription("使用本地套接字进行游戏流量传输。这使用直接的套接字调用进行发送/接收，以显著提高速度并减少GC压力。仅适用于Windows。Linux可能无效", tags: new ConfigurationManagerAttributes() { Order = 8 }));
 
-			ForceIP = Config.Bind("Network", "Force IP", "",
-				new ConfigDescription("Forces the server when hosting to use this IP when broadcasting to the backend instead of automatically trying to fetch it. Leave empty to disable.", tags: new ConfigurationManagerAttributes() { Order = 7 }));
+            ForceIP = Config.Bind("网络", "强制IP(Force IP)", "",
+                new ConfigDescription("当托管时，强制服务器使用此IP进行广播，而不是自动尝试获取IP。留空以禁用\n若使用radmin等虚拟局域网联机工具，请填写自己联机所使用的IP", tags: new ConfigurationManagerAttributes() { Order = 7 }));
 
-			ForceBindIP = Config.Bind("Network", "Force Bind IP", "",
-				new ConfigDescription("Forces the server when hosting to use this local IP when starting the server. Useful if you are hosting on a VPN.", new AcceptableValueList<string>(GetLocalAddresses()), new ConfigurationManagerAttributes() { Order = 6 }));
+            ForceBindIP = Config.Bind("网络", "强制绑定IP(Force Bind IP)", "",
+                new ConfigDescription("当托管时，强制服务器使用此本地IP启动服务器。如果您在VPN上托管，这非常有用\n若使用radmin等虚拟局域网联机工具，请填写自己联机所使用的IP", new AcceptableValueList<string>(GetLocalAddresses()), new ConfigurationManagerAttributes() { Order = 6 }));
 
-			AutoRefreshRate = Config.Bind("Network", "Auto Server Refresh Rate", 10f,
-				new ConfigDescription("Every X seconds the client will ask the server for the list of matches while at the lobby screen.", new AcceptableValueRange<float>(3f, 60f), new ConfigurationManagerAttributes() { Order = 5 }));
+            AutoRefreshRate = Config.Bind("网络", "刷新服务器房间频率", 10f,
+                new ConfigDescription("客户端在地图准备大厅屏幕上每X秒将向服务器请求刷新当前房间列表", new AcceptableValueRange<float>(3f, 60f), new ConfigurationManagerAttributes() { Order = 5 }));
 
-			UDPPort = Config.Bind("Network", "UDP Port", 25565,
-				new ConfigDescription("Port to use for UDP gameplay packets.", tags: new ConfigurationManagerAttributes() { Order = 4 }));
+            UDPPort = Config.Bind("网络", "UDP 端口", 25565,
+                new ConfigDescription("用于UDP游戏数据包的端口", tags: new ConfigurationManagerAttributes() { Order = 4 }));
 
-			UseUPnP = Config.Bind("Network", "Use UPnP", false,
-				new ConfigDescription("Attempt to open ports using UPnP. Useful if you cannot open ports yourself but the router supports UPnP.", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+            UseUPnP = Config.Bind("网络", "使用 UPnP", false,
+                new ConfigDescription("尝试使用UPnP打开端口。如果您无法自己打开端口，但路由器支持UPnP，这将很有用", tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
-			UseNatPunching = Config.Bind("Network", "Use NAT Punching", false,
-				new ConfigDescription("Use NAT punching when hosting a raid. Only works with fullcone NAT type routers and requires NatPunchServer to be running on the SPT server. UPnP, Force IP and Force Bind IP are disabled with this mode.", tags: new ConfigurationManagerAttributes() { Order = 2 }));
+            UseNatPunching = Config.Bind("网络", "使用 NAT 打孔", false,
+                new ConfigDescription("在托管战局时使用NAT打孔。仅适用于全锥形NAT类型的路由器，并且需要在SPT服务器上运行NatPunchServer。启用此模式时，UPnP、强制IP和强制绑定IP将被禁用", tags: new ConfigurationManagerAttributes() { Order = 2 }));
 
-			ConnectionTimeout = Config.Bind("Network", "Connection Timeout", 15,
-				new ConfigDescription("How long it takes for a connection to be considered dropped if no packets are received.", new AcceptableValueRange<int>(5, 60), new ConfigurationManagerAttributes() { Order = 1 }));
+            ConnectionTimeout = Config.Bind("网络", "连接超时", 15,
+                new ConfigDescription("如果未收到数据包，则连接被视为丢失的时间", new AcceptableValueRange<int>(5, 60), new ConfigurationManagerAttributes() { Order = 1 }));
 
-			// Gameplay
+            // Gameplay
 
-			HeadDamageMultiplier = Config.Bind("Gameplay", "Head Damage Multiplier", 1f,
-				new ConfigDescription("X multiplier to damage taken on the head collider. 0.2 = 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 4 }));
+            HeadDamageMultiplier = Config.Bind("游戏玩法", "头部伤害倍率", 1f,
+                new ConfigDescription("头部受到伤害的倍数。0.2 表示 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 4 }));
 
-			ArmpitDamageMultiplier = Config.Bind("Gameplay", "Armpit Damage Multiplier", 1f,
-				new ConfigDescription("X multiplier to damage taken on the armpits collider. 0.2 = 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 3 }));
+            ArmpitDamageMultiplier = Config.Bind("游戏玩法", "腋下伤害倍率", 1f,
+                new ConfigDescription("腋下受到伤害的倍数。0.2 表示 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 3 }));
 
-			StomachDamageMultiplier = Config.Bind("Gameplay", "Stomach Damage Multiplier", 1f,
-				new ConfigDescription("X multiplier to damage taken on the stomach collider. 0.2 = 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 2 }));
+            StomachDamageMultiplier = Config.Bind("游戏玩法", "腹部伤害倍率", 1f,
+                new ConfigDescription("腹部受到伤害的倍数。0.2 表示 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 2 }));
 
-			DisableBotMetabolism = Config.Bind("Gameplay", "Disable Bot Metabolism", false,
-				new ConfigDescription("Disables metabolism on bots, preventing them from dying from loss of energy/hydration during long raids.", tags: new ConfigurationManagerAttributes() { Order = 1 }));
-		}
+            DisableBotMetabolism = Config.Bind("游戏玩法", "禁用AI新陈代谢", false,
+                new ConfigDescription("禁用AI的新陈代谢，防止它们在过长时间的战局中因能量/水分丧失而死亡", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+        }
 
 		private void OfficialVersion_SettingChanged(object sender, EventArgs e)
 		{

@@ -54,12 +54,12 @@ namespace Fika.Core.EssentialPatches
 			Traverse preloaderUiTraverse = Traverse.Create(MonoBehaviourSingleton<PreloaderUI>.Instance);
 			if (FikaPlugin.OfficialVersion.Value)
 			{
-				preloaderUiTraverse.Field("string_2").SetValue($"{officialVersion} Beta version");
+				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | {officialVersion} Beta version");
 				versionNumberTraverse.Field("Major").SetValue(officialVersion);
 			}
 			else
 			{
-				preloaderUiTraverse.Field("string_2").SetValue($"FIKA BETA {fikaVersion} | {versionLabel}");
+				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | FIKA BETA {fikaVersion} | {versionLabel}");
 				versionNumberTraverse.Field("Major").SetValue($"{fikaVersion} {versionLabel}");
 			}
 
