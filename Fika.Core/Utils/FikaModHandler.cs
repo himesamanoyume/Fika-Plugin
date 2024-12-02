@@ -4,11 +4,12 @@ using BepInEx.Logging;
 using Comfort.Common;
 using EFT;
 using EFT.UI;
-using Fika.Core.Networking.Http.Models;
+using Fika.Core.Networking.Http;
 using LiteNetLib.Utils;
 using Newtonsoft.Json;
 using SPT.Common.Http;
 using SPT.Custom.Utils;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -17,12 +18,23 @@ using Logger = BepInEx.Logging.Logger;
 
 namespace Fika.Core.Utils
 {
+	/// <summary>
+	/// Class used to verify and handle other SPT mods
+	/// </summary>
 	public class FikaModHandler
 	{
 		private readonly ManualLogSource logger = Logger.CreateLogSource("FikaModHandler");
 
 		public bool QuestingBotsLoaded = false;
 		public bool SAINLoaded = false;
+
+		public Version SPTCoreVersion { get; private set; }
+
+		public FikaModHandler()
+		{
+			Chainloader.PluginInfos.TryGetValue("com.SPT.core", out PluginInfo pluginInfo);
+			SPTCoreVersion = pluginInfo.Metadata.Version;
+		}
 
 		public void VerifyMods()
 		{
@@ -38,6 +50,7 @@ namespace Fika.Core.Utils
 				uint crc32 = CRC32C.Compute(fileBytes, 0, fileBytes.Length);
 				loadedMods.Add(pluginInfo.Metadata.GUID, crc32);
 				logger.LogInfo($"Loaded plugin: [{pluginInfo.Metadata.Name}] with GUID [{pluginInfo.Metadata.GUID}] and crc32 [{crc32}]");
+
 				CheckSpecialMods(pluginInfo.Metadata.GUID);
 			}
 

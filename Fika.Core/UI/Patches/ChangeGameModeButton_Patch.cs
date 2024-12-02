@@ -1,11 +1,10 @@
 ﻿using EFT.UI;
-using Fika.Core.Utils;
 using SPT.Reflection.Patching;
 using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using static Fika.Core.Utils.ColorUtils;
+using static Fika.Core.UI.FikaUIGlobals;
 
 namespace Fika.Core.UI.Patches
 {
@@ -20,8 +19,8 @@ namespace Fika.Core.UI.Patches
 		private static bool PrefixChange(TextMeshProUGUI ____buttonLabel, TextMeshProUGUI ____buttonDescription, Image ____buttonDescriptionIcon,
 			GameObject ____availableState)
 		{
-			____buttonLabel.text = "版本 v1.2";
-			____buttonDescription.text = $"{ColorizeText(Colors.BLUE, "Miyako")} Tarkov By 姫様の夢";
+			____buttonLabel.text = "版本 v1.3";
+			____buttonDescription.text = $"{ColorizeText(EColors.BLUE, "Miyako")} Tarkov By 姫様の夢";
 			____buttonDescriptionIcon.gameObject.SetActive(false);
 			____availableState.SetActive(true);
 			return false;

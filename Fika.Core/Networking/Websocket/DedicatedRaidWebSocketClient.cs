@@ -35,13 +35,15 @@ namespace Fika.Core.Networking.Websocket
 		{
 			Host = RequestHandler.Host.Replace("http", "ws");
 			SessionId = RequestHandler.SessionId;
-			Url = $"{Host}/fika/dedicatedraidservice/{SessionId}?";
+			Url = $"{Host}/fika/dedicatedraidservice/";
 
 			_webSocket = new WebSocket(Url)
 			{
 				WaitTime = TimeSpan.FromMinutes(1),
 				EmitOnPing = true
 			};
+
+			_webSocket.SetCredentials(SessionId, "", true);
 
 			_webSocket.OnOpen += WebSocket_OnOpen;
 			_webSocket.OnError += WebSocket_OnError;
@@ -102,26 +104,23 @@ namespace Fika.Core.Networking.Websocket
 				case "fikaDedicatedJoinMatch":
 					string matchId = jsonObject.Value<string>("matchId");
 
-					GameObject matchmakerObject = MatchmakerAcceptScreen_Show_Patch.MatchmakerObject;
 					MatchMakerAcceptScreen matchMakerAcceptScreen = FikaBackendUtils.MatchMakerAcceptScreenInstance;
 
 					if (!string.IsNullOrEmpty(matchId))
 					{
 						TarkovApplication tarkovApplication = (TarkovApplication)Singleton<ClientApplication<ISession>>.Instance;
-
-						tarkovApplication.StartCoroutine(MatchMakerUIScript.JoinMatch(tarkovApplication.Session.Profile.Id, matchId, null, () =>
+						tarkovApplication.StartCoroutine(MatchMakerUIScript.JoinMatch(tarkovApplication.Session.Profile.Id, matchId, null, (bool success) =>
 						{
-							// Hide matchmaker UI
-							matchmakerObject.SetActive(false);
-
-							// Matchmaker next screen (accept)
-							matchMakerAcceptScreen.method_22();
+							if (success)
+							{
+								// Matchmaker next screen (accept)
+								matchMakerAcceptScreen.method_19().HandleExceptions();
+							}
 						}, false));
 					}
 					else
 					{
 						PreloaderUI.Instance.ShowErrorScreen("Fika Dedicated Error", "Received fikaJoinMatch WS event but there was no matchId");
-						matchmakerObject.SetActive(true);
 					}
 
 					FikaPlugin.DedicatedRaidWebSocket.Close();

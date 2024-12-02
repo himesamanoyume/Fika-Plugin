@@ -59,12 +59,16 @@ namespace Fika.Core.EssentialPatches
 			}
 			else
 			{
-				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | FIKA BETA {fikaVersion} | {versionLabel}");
+#if DEBUG
+				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | FIKA {fikaVersion} (DEBUG) | {versionLabel}");
+#else
+				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | FIKA {fikaVersion} | {versionLabel}");
+#endif
 				versionNumberTraverse.Field("Major").SetValue($"{fikaVersion} {versionLabel}");
 			}
 
 			// Game mode
-			preloaderUiTraverse.Field("string_4").SetValue("PvE");
+			//preloaderUiTraverse.Field("string_4").SetValue("PvE");
 			// Update version label
 			preloaderUiTraverse.Method("method_6").GetValue();
 		}
