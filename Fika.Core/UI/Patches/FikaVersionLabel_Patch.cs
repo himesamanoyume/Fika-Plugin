@@ -5,6 +5,7 @@ using SPT.Common.Utils;
 using SPT.Custom.Models;
 using SPT.Reflection.Patching;
 using System.Reflection;
+using static Fika.Core.UI.FikaUIGlobals;
 
 namespace Fika.Core.EssentialPatches
 {
@@ -54,15 +55,15 @@ namespace Fika.Core.EssentialPatches
 			Traverse preloaderUiTraverse = Traverse.Create(MonoBehaviourSingleton<PreloaderUI>.Instance);
 			if (FikaPlugin.OfficialVersion.Value)
 			{
-				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | {officialVersion} Beta version");
+				preloaderUiTraverse.Field("string_2").SetValue($"{ColorizeText(EColor.BLUE, "MIYAKO")} TARKOV | {officialVersion} Beta version");
 				versionNumberTraverse.Field("Major").SetValue(officialVersion);
 			}
 			else
 			{
 #if DEBUG
-				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | FIKA {fikaVersion} (DEBUG) | {versionLabel}");
+				preloaderUiTraverse.Field("string_2").SetValue($"{ColorizeText(EColor.BLUE, "MIYAKO")} TARKOV | FIKA {fikaVersion} (DEBUG) | {versionLabel}");
 #else
-				preloaderUiTraverse.Field("string_2").SetValue($"MIYAKO TARKOV | FIKA {fikaVersion} | {versionLabel}");
+				preloaderUiTraverse.Field("string_2").SetValue($"{ColorizeText(EColor.BLUE, "MIYAKO")} TARKOV | FIKA {fikaVersion} | {versionLabel}");
 #endif
 				versionNumberTraverse.Field("Major").SetValue($"{fikaVersion} {versionLabel}");
 			}
