@@ -155,7 +155,7 @@ namespace Fika.Core.UI.Custom
 					string time = information.Time is EDateTime.CURR ? "左" : "右";
 					HoverTooltipArea tooltip = newPlayer.AddComponent<HoverTooltipArea>();
 					tooltip.enabled = true;
-					tooltip.SetMessageText($"正作为 {side} 阵营在 {ColorizeText(EColor.BLUE, information.Location.Localized())} 职中\n时间段: {time}边时间段");
+					tooltip.SetMessageText($"正作为 {side} 阵营在 {ColorizeText(EColor.BLUE, information.Location.Localized())} 中\n时间段: {time}侧时间段");
 				}
 				newPlayer.SetActive(true);
 				players.Add(newPlayer);
