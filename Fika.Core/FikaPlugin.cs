@@ -664,10 +664,10 @@ namespace Fika.Core
                 new ConfigDescription("如果未收到数据包，则连接被视为丢失的时间", new AcceptableValueRange<int>(5, 60), new ConfigurationManagerAttributes() { Order = 2 }));
 
 			SendRate = Config.Bind("网络", "发送率", ESendRate.Medium,
-				new ConfigDescription("每秒移动数据包应该发送多少次（越低=使用的带宽越少，在插值期间稍微延迟）\n这只影响主机，并将同步到所有客户端。\n每秒的数量：\n\nVery Low = 10\nLow = 15\nMedium = 20\nHigh = 30\n\ n建议保持不高于Medium，因为之后的收益微不足道。", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+				new ConfigDescription("每秒移动数据包应该发送多少次（越低=使用的带宽越少，在插值期间稍微延迟）\n这只影响主机，并将同步到所有客户端。\n每秒的数量：\n\nVery Low = 10\nLow = 15\nMedium = 20\nHigh = 30\n\n建议保持不高于Medium，因为之后的收益微不足道。", tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
 			SmoothingRate = Config.Bind("网络", "平滑率", ESmoothingRate.Medium,
-				new ConfigDescription("本地模拟落后于发送速率*平滑速率。这保证了我们在缓冲区中总是有足够的快照来缓解插值期间的延迟和抖动。\n\nLow = 1.5\nMedium = 2\nHigh = 2.5\n\ n如果移动不顺畅，将此设置为“High”。不能在战局中更改。", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+				new ConfigDescription("本地模拟落后于发送速率*平滑速率。这保证了我们在缓冲区中总是有足够的快照来缓解插值期间的延迟和抖动。\n\nLow = 1.5\nMedium = 2\nHigh = 2.5\n\n如果移动不顺畅，将此设置为“High”。不能在战局中更改。", tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
             // Gameplay
 

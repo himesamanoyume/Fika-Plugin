@@ -13,6 +13,6 @@ public class MainMenuUI : MonoBehaviour
 
 	public void UpdateLabel(int amount)
 	{
-		Label.text = $"ONLINE PLAYERS: {amount}";
+		Label.text = $"在线玩家: {amount}";
 	}
 }

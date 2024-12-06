@@ -20,12 +20,12 @@ public class MainMenuUIPlayer : MonoBehaviour
 		PlayerLevel.text = $"({level})";
 		string status = presence switch
 		{
-			EFikaPlayerPresence.IN_MENU => "In Menu",
-			EFikaPlayerPresence.IN_RAID => "In Raid",
-			EFikaPlayerPresence.IN_STASH => "In Stash",
-			EFikaPlayerPresence.IN_HIDEOUT => "In Hideout",
-			EFikaPlayerPresence.IN_FLEA => "In Flea",
-			_ => "In Menu",
+			EFikaPlayerPresence.IN_MENU => "主界面",
+			EFikaPlayerPresence.IN_RAID => "战局中",
+			EFikaPlayerPresence.IN_STASH => "仓库",
+			EFikaPlayerPresence.IN_HIDEOUT => "藏身处",
+			EFikaPlayerPresence.IN_FLEA => "跳蚤市场",
+			_ => "主界面",
 		};
 		PlayerStatus.text = status;
 		SetImageColor(presence);
