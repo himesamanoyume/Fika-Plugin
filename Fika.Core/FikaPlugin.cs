@@ -137,6 +137,7 @@ namespace Fika.Core
 		public static ConfigEntry<EQuestSharingTypes> QuestTypesToShareAndReceive { get; set; }
 		public static ConfigEntry<bool> QuestSharingNotifications { get; set; }
 		public static ConfigEntry<bool> EasyKillConditions { get; set; }
+		public static ConfigEntry<bool> SharedKillExperience { get; set; }
 		public static ConfigEntry<bool> SharedBossExperience { get; set; }
 
 		// Coop | Pinging
@@ -511,13 +512,16 @@ namespace Fika.Core
             // Coop | Quest Sharing
 
             QuestTypesToShareAndReceive = Config.Bind("联机 | 任务共享", "任务类型", EQuestSharingTypes.All,
-                new ConfigDescription("选择能够共享的任务类型。\nKill - 击杀\nItem - 寻找物品\nLocation - 位置踩点\nPlaceBeacon - 放置标记：既包括标记也包括放置物品", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+                new ConfigDescription("选择能够共享的任务类型。\nKill - 击杀\nItem - 寻找物品\nLocation - 位置踩点\nPlaceBeacon - 放置标记：既包括标记也包括放置物品", tags: new ConfigurationManagerAttributes() { Order = 4 }));
 
             QuestSharingNotifications = Config.Bind("联机 | 任务共享", "显示通知", true,
-                new ConfigDescription("是否在任务进度共享时显示通知", tags: new ConfigurationManagerAttributes() { Order = 2 }));
+                new ConfigDescription("是否在任务进度共享时显示通知", tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
             EasyKillConditions = Config.Bind("联机 | 任务共享", "共享击杀进度", false,
-                new ConfigDescription("启用简化击杀条件。当启用时，每当友方玩家击杀敌人时，将被视为自己任务进度所杀", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+                new ConfigDescription("启用简化击杀条件。当启用时，每当友方玩家击杀敌人时，将被视为自己任务进度所杀。这可能是不一致的，也并不总是有效的", tags: new ConfigurationManagerAttributes() { Order = 2 }));
+
+			SharedKillExperience = Config.Bind("联机 | 任务共享", "共享击杀经验", false,
+				new ConfigDescription("当队友击杀非BOSS敌人时你是否能获得其一半的击杀经验值", tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
             SharedBossExperience = Config.Bind("联机 | 任务共享", "共享BOSS经验", false,
 				new ConfigDescription("当队友击杀BOSS时你是否能获得其一半的BOSS击杀经验值", tags: new ConfigurationManagerAttributes() { Order = 0 }));
