@@ -110,9 +110,9 @@ namespace Fika.Core.UI
 			ui.AddDisposable(errorScreenHandler.method_0);
 			string text = buttonType switch
 			{
-				ErrorScreen.EButtonType.OkButton => "我已了解",
-				ErrorScreen.EButtonType.CancelButton => "取消",
-				ErrorScreen.EButtonType.QuitButton => "我拒绝",
+				ErrorScreen.EButtonType.OkButton => "I UNDERSTAND",
+				ErrorScreen.EButtonType.CancelButton => "CANCEL",
+				ErrorScreen.EButtonType.QuitButton => "I DECLINE",
 				_ => throw new ArgumentOutOfRangeException()
 			};
 
