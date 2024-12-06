@@ -20,8 +20,8 @@ namespace Fika.Core.UI.Patches
 		[PatchPostfix]
 		static void Postfix(DefaultUIButton ____readyButton)
 		{
-			____readyButton.SetDisabledTooltip("Disabled with Fika");
-			____readyButton.SetEnabledTooltip("Disabled with Fika");
+			____readyButton.SetDisabledTooltip("已被Fika禁用");
+			____readyButton.SetEnabledTooltip("已被Fika禁用");
 
 			____readyButton.Interactable = false;
 		}

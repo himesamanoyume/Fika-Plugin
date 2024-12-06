@@ -160,7 +160,7 @@ namespace Fika.Core.UI.Patches
 								{
 									if (ar.Failed)
 									{
-										PreloaderUI.Instance.ShowErrorScreen("Fika.Core.ItemContextPatch", ar.Error ?? "An unknown error has occurred");
+										PreloaderUI.Instance.ShowErrorScreen("Fika.Core.ItemContextPatch", ar.Error ?? "发生了一个未知的错误");
 									}
 								});
 							}

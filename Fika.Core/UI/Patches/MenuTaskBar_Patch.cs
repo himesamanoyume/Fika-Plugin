@@ -66,7 +66,7 @@ namespace Fika.Core.UI.Patches
 							{
 								JObject profile = await FikaRequestHandler.GetProfile();
 								bool responseHasError = profile.ContainsKey("errmsg");
-								string error = responseHasError ? profile.Value<string>("errmsg") : "Failed to retrieve profile";
+								string error = responseHasError ? profile.Value<string>("errmsg") : "检索配置文件失败";
 								if (!responseHasError && profile != null)
 								{
 									Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ButtonBottomBarClick);

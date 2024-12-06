@@ -66,7 +66,7 @@ namespace Fika.Core.Utils
 			if (validationResult.Forbidden == null || validationResult.MissingRequired == null || validationResult.HashMismatch == null)
 			{
 				FikaPlugin.Instance.FikaLogger.LogError("FikaModHandler::VerifyMods: Response was invalid!");
-				MessageBoxHelper.Show($"Failed to verify mods with server.\nMake sure that the server mod is installed!", "FIKA ERROR", MessageBoxHelper.MessageBoxType.OK);
+				MessageBoxHelper.Show($"与服务器验证mod失败.\n确保安装了服务器mod!", "FIKA 错误", MessageBoxHelper.MessageBoxType.OK);
 				Application.Quit();
 				return;
 			}
