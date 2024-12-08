@@ -310,114 +310,6 @@ namespace Fika.Core.Coop.GameMode
 
 		#region Bots
 		/// <summary>
-		/// Returns all human players
-		/// </summary>
-		/// <param name="coopHandler"><see cref="CoopHandler"/> used to fetch players</param>
-		/// <returns></returns>
-		private List<CoopPlayer> GetPlayers(CoopHandler coopHandler)
-		{
-			List<CoopPlayer> humanPlayers = [];
-
-			// Grab all players
-			foreach (CoopPlayer player in coopHandler.Players.Values)
-			{
-				if ((player.IsYourPlayer || player is ObservedCoopPlayer) && player.HealthController.IsAlive)
-				{
-					humanPlayers.Add(player);
-				}
-			}
-			return humanPlayers;
-		}
-
-		/// <summary>
-		/// Calculates the distance from all players
-		/// </summary>
-		/// <param name="position">The <see cref="Vector3"/> position</param>
-		/// <param name="humanPlayers"><see cref="List{T}"/> of all human <see cref="CoopPlayer"/>s</param>
-		/// <returns></returns>
-		private float GetDistanceFromPlayers(Vector3 position, List<CoopPlayer> humanPlayers)
-		{
-			float distance = float.PositiveInfinity;
-
-			foreach (Player player in humanPlayers)
-			{
-				float tempDistance = Vector3.SqrMagnitude(position - player.Position);
-
-				if (tempDistance < distance) // Get the closest distance to any player. so we dont despawn bots in a players face.
-				{
-					distance = tempDistance;
-				}
-			}
-			return distance;
-		}
-
-		/// <summary>
-		/// Grabs the bot furthest away from all players and returns its distance
-		/// </summary>
-		/// <param name="humanPlayers">List of all human <see cref="CoopPlayer"/>s</param>
-		/// <param name="furthestDistance">The furthest <see cref="float"/> distance</param>
-		/// <returns></returns>
-		private string GetFurthestBot(List<CoopPlayer> humanPlayers, out float furthestDistance)
-		{
-			string furthestBot = string.Empty;
-			furthestDistance = 0f;
-
-			foreach (KeyValuePair<string, Player> botKeyValuePair in Bots)
-			{
-				if (IsInvalidBotForDespawning(botKeyValuePair))
-				{
-					continue;
-				}
-
-				float tempDistance = GetDistanceFromPlayers(botKeyValuePair.Value.Position, humanPlayers);
-
-				if (tempDistance > furthestDistance) // We still want the furthest bot.
-				{
-					furthestDistance = tempDistance;
-					furthestBot = botKeyValuePair.Key;
-				}
-			}
-
-			return furthestBot;
-		}
-
-		/// <summary>
-		/// Checks whether this bot is valid for despawning
-		/// </summary>
-		/// <param name="kvp"><see cref="KeyValuePair{TKey, TValue}"/> of <see cref="string"/> profileId and <see cref="Player"/> player</param>
-		/// <returns></returns>
-		private bool IsInvalidBotForDespawning(KeyValuePair<string, Player> kvp)
-		{
-			if (kvp.Value == null || kvp.Value == null || kvp.Value.Position == null)
-			{
-#if DEBUG
-				Logger.LogWarning("Bot is null, skipping");
-#endif
-				return true;
-			}
-
-			CoopBot coopBot = (CoopBot)kvp.Value;
-
-			if (coopBot != null)
-			{
-#if DEBUG
-				Logger.LogWarning("Bot is not started, skipping");
-#endif
-				return true;
-			}
-
-			WildSpawnType role = kvp.Value.Profile.Info.Settings.Role;
-
-			if (role is not WildSpawnType.pmcUSEC and not WildSpawnType.pmcBEAR and not WildSpawnType.assault)
-			{
-				// We skip all the bots that are not pmcUSEC, pmcBEAR or assault. That means we never remove bosses, bossfollowers, and raiders
-				return true;
-			}
-
-			return false;
-		}
-
-		/// <summary>
 		/// Used to spawn a bot for the host
 		/// </summary>
 		/// <param name="profile"><see cref="Profile"/> to spawn</param>
@@ -439,16 +331,6 @@ namespace Fika.Core.Coop.GameMode
 				return null;
 			}
 
-			while (!Status.IsRunned())
-			{
-				if (Status == GameStatus.Stopped)
-				{
-					return null;
-				}
-
-				await Task.Yield();
-			}
-
 			WildSpawnType role = profile.Info.Settings.Role;
 			bool isSpecial = false;
 			if (role is not WildSpawnType.pmcUSEC and not WildSpawnType.pmcBEAR and not WildSpawnType.assault)
@@ -459,7 +341,6 @@ namespace Fika.Core.Coop.GameMode
 			if (FikaPlugin.EnforcedSpawnLimits.Value && Bots.Count >= botsController_0.BotSpawner.MaxBots)
 			{
 				bool despawned = false;
-
 				if (FikaPlugin.DespawnFurthest.Value)
 				{
 					despawned = TryDespawnFurthestBot(profile, position, coopHandler);
@@ -604,9 +485,9 @@ namespace Fika.Core.Coop.GameMode
 		/// <returns></returns>
 		private bool TryDespawnFurthestBot(Profile profile, Vector3 position, CoopHandler coopHandler)
 		{
-			List<CoopPlayer> humanPlayers = GetPlayers(coopHandler);
+			List<CoopPlayer> humanPlayers = BotExtensions.GetPlayers(coopHandler);
 
-			string botKey = GetFurthestBot(humanPlayers, out float furthestDistance);
+			string botKey = BotExtensions.GetFurthestBot(humanPlayers, Bots, out float furthestDistance);
 
 			if (botKey == string.Empty)
 			{
@@ -616,7 +497,7 @@ namespace Fika.Core.Coop.GameMode
 				return false;
 			}
 
-			if (furthestDistance > GetDistanceFromPlayers(position, humanPlayers))
+			if (furthestDistance > BotExtensions.GetDistanceFromPlayers(position, humanPlayers))
 			{
 #if DEBUG
 				Logger.LogWarning($"We're not despawning anything. The furthest bot is closer than the one we wanted to spawn.");
@@ -963,8 +844,6 @@ namespace Fika.Core.Coop.GameMode
 			Func<float> getAimingSensitivity, IStatisticsManager statisticsManager, ISession session,
 			ELocalMode localMode)
 		{
-			gameWorld.LocationId = Location_0.Id;
-
 			bool spawnedInSession = profile.Side == EPlayerSide.Savage || TransitControllerAbstractClass.IsTransit(profile.Id, out int _);
 			profile.SetSpawnedInSession(spawnedInSession);
 
@@ -1122,7 +1001,74 @@ namespace Fika.Core.Coop.GameMode
 				throw new NullReferenceException("CoopHandler was missing!");
 			}
 
+			GameWorld gameWorld = Singleton<GameWorld>.Instance;
+			gameWorld.LocationId = Location_0.Id;
+
 			ExfiltrationControllerClass.Instance.InitAllExfiltrationPoints(Location_0._Id, Location_0.exits, !isServer, Location_0.DisabledScavExits);
+
+			Logger.LogInfo($"Location: {Location_0.Name}");
+			BackendConfigSettingsClass instance = Singleton<BackendConfigSettingsClass>.Instance;
+
+			if (instance != null && instance.ArtilleryShelling != null && instance.ArtilleryShelling.ArtilleryMapsConfigs != null &&
+				instance.ArtilleryShelling.ArtilleryMapsConfigs.Keys.Contains(Location_0.Id))
+			{
+				if (isServer)
+				{
+					gameWorld.ServerShellingController = new GClass607();
+				}
+				gameWorld.ClientShellingController = new GClass1381(isServer);
+			}
+
+			if (instance != null && instance.EventSettings.EventActive && !instance.EventSettings.LocationsToIgnore.Contains(Location_0.Id))
+			{
+#if DEBUG
+				Logger.LogWarning("Spawning halloween prefabs");
+#endif
+				gameWorld.HalloweenEventController = new HalloweenEventControllerClass();
+				GameObject gameObject = (GameObject)Resources.Load("Prefabs/HALLOWEEN_CONTROLLER");
+				if (gameObject != null)
+				{
+					transform.InstantiatePrefab(gameObject);
+				}
+				else
+				{
+					Logger.LogError("CoopGame::vmethod_1: Error loading Halloween assets!");
+				}
+
+				if (isServer)
+				{
+					halloweenEventManager = gameWorld.gameObject.GetOrAddComponent<CoopHalloweenEventManager>();
+				}
+			}
+
+			if (FikaPlugin.Instance.UseBTR && instance != null && instance.BTRSettings.LocationsWithBTR.Contains(Location_0.Id))
+			{
+#if DEBUG
+				Logger.LogWarning("Spawning BTR controller");
+#endif
+				gameWorld.BtrController = new BTRControllerClass(gameWorld);
+			}
+
+			bool transitActive;
+			if (instance == null)
+			{
+				transitActive = false;
+			}
+			else
+			{
+				BackendConfigSettingsClass.GClass1529 transitSettings = instance.transitSettings;
+				transitActive = transitSettings != null && transitSettings.active;
+			}
+			if (transitActive)
+			{
+				gameWorld.TransitController = isServer ? new FikaHostTransitController(instance.transitSettings, Location_0.transitParameters,
+					Profile_0, localRaidSettings_0) : new FikaClientTransitController(instance.transitSettings, Location_0.transitParameters,
+					Profile_0, localRaidSettings_0);
+			}
+			else
+			{
+				TransitControllerAbstractClass.DisableTransitPoints();
+			}
 
 			ApplicationConfigClass config = BackendConfigAbstractClass.Config;
 			if (config.FixedFrameRate > 0f)
@@ -1143,6 +1089,11 @@ namespace Fika.Core.Coop.GameMode
 				PlayerCameraController.Create(gparam_0.Player);
 				CameraClass.Instance.SetOcclusionCullingEnabled(Location_0.OcculsionCullingEnabled);
 				CameraClass.Instance.IsActive = false;
+
+				if (FikaBackendUtils.IsDedicated && gameWorld.TransitController is FikaHostTransitController hostController)
+				{
+					hostController.SetupDedicatedPlayerTransitStash(player);
+				}
 			}
 
 			await WaitForPlayersToConnect();
@@ -1556,104 +1507,6 @@ namespace Fika.Core.Coop.GameMode
 				DynamicAI = gameObject.AddComponent<FikaDynamicAI>();
 			}
 
-			Logger.LogInfo($"Location: {Location_0.Name}");
-			BackendConfigSettingsClass instance = Singleton<BackendConfigSettingsClass>.Instance;
-
-			if (instance != null && instance.ArtilleryShelling != null && instance.ArtilleryShelling.ArtilleryMapsConfigs != null &&
-				instance.ArtilleryShelling.ArtilleryMapsConfigs.Keys.Contains(Location_0.Id))
-			{
-				if (isServer)
-				{
-					Singleton<GameWorld>.Instance.ServerShellingController = new GClass607();
-				}
-				Singleton<GameWorld>.Instance.ClientShellingController = new GClass1381(isServer);
-			}
-
-			if (instance != null && instance.EventSettings.EventActive && !instance.EventSettings.LocationsToIgnore.Contains(Location_0.Id))
-			{
-#if DEBUG
-				Logger.LogWarning("Spawning halloween prefabs");
-#endif
-				gameWorld.HalloweenEventController = new HalloweenEventControllerClass();
-				GameObject gameObject = (GameObject)Resources.Load("Prefabs/HALLOWEEN_CONTROLLER");
-				if (gameObject != null)
-				{
-					transform.InstantiatePrefab(gameObject);
-				}
-				else
-				{
-					Logger.LogError("CoopGame::vmethod_1: Error loading Halloween assets!");
-				}
-
-				if (isServer)
-				{
-					halloweenEventManager = gameWorld.gameObject.GetOrAddComponent<CoopHalloweenEventManager>();
-				}
-			}
-
-			if (FikaPlugin.Instance.UseBTR && instance != null && instance.BTRSettings.LocationsWithBTR.Contains(Location_0.Id))
-			{
-#if DEBUG
-				Logger.LogWarning("Spawning BTR controller");
-#endif
-				gameWorld.BtrController = new BTRControllerClass(gameWorld);
-			}
-
-			bool transitActive;
-			if (instance == null)
-			{
-				transitActive = false;
-			}
-			else
-			{
-				BackendConfigSettingsClass.GClass1529 transitSettings = instance.transitSettings;
-				transitActive = transitSettings != null && transitSettings.active;
-			}
-			if (transitActive)
-			{
-				Singleton<GameWorld>.Instance.TransitController = isServer ? new FikaHostTransitController(instance.transitSettings, Location_0.transitParameters,
-					Profile_0, localRaidSettings_0) : new FikaClientTransitController(instance.transitSettings, Location_0.transitParameters,
-					Profile_0, localRaidSettings_0);
-			}
-			else
-			{
-				TransitControllerAbstractClass.DisableTransitPoints();
-			}
-
-			if (WeatherController.Instance != null)
-			{
-				SetMatchmakerStatus(LocaleUtils.UI_INIT_WEATHER.Localized());
-				if (isServer)
-				{
-					GClass1310 weather = await iSession.WeatherRequest();
-					Season = weather.Season;
-					SeasonsSettings = weather.SeasonsSettings;
-					if (!OfflineRaidSettingsMenuPatch_Override.UseCustomWeather)
-					{
-						WeatherClasses = weather.Weathers;
-						WeatherController.Instance.method_0(WeatherClasses);
-					}
-				}
-				else if (!isServer)
-				{
-					await GetWeather();
-					WeatherController.Instance.method_0(WeatherClasses);
-				}
-			}
-
-			gameWorld.TriggersModule = gameObject.AddComponent<LocalClientTriggersModule>();
-			gameWorld.FillLampControllers();
-
-			WeatherReady = true;
-			OfflineRaidSettingsMenuPatch_Override.UseCustomWeather = false;
-
-			Class442 seasonController = new();
-			gameWorld.GInterface29_0 = seasonController;
-
-#if DEBUG
-			Logger.LogWarning("Running season handler");
-#endif
-			await seasonController.Run(Season, SeasonsSettings);
 			await WaitForOtherPlayers();
 
 			SetMatchmakerStatus(LocaleUtils.UI_FINISHING_RAID_INIT.Localized());
@@ -1708,6 +1561,60 @@ namespace Fika.Core.Coop.GameMode
 
 			Singleton<BackendConfigSettingsClass>.Instance.TimeBeforeDeployLocal = Math.Max(Singleton<BackendConfigSettingsClass>.Instance.TimeBeforeDeployLocal, 3);
 			GameWorld_0.RegisterBorderZones();
+		}
+
+		public override IEnumerator vmethod_5(Action runCallback)
+		{
+			if (WeatherController.Instance != null)
+			{
+				SetMatchmakerStatus(LocaleUtils.UI_INIT_WEATHER.Localized());
+				if (isServer)
+				{
+					Task<GClass1310> weatherTask = iSession.WeatherRequest();
+					while (!weatherTask.IsCompleted)
+					{
+						yield return new WaitForEndOfFrame();
+					}
+					GClass1310 weather = weatherTask.Result;
+					Season = weather.Season;
+					SeasonsSettings = weather.SeasonsSettings;
+					if (!OfflineRaidSettingsMenuPatch_Override.UseCustomWeather)
+					{
+						WeatherClasses = weather.Weathers;
+						WeatherController.Instance.method_0(WeatherClasses);
+					}
+				}
+				else if (!isServer)
+				{
+					Task getWeather = GetWeather();
+					while (!getWeather.IsCompleted)
+					{
+						yield return new WaitForEndOfFrame();
+					}
+					WeatherController.Instance.method_0(WeatherClasses);
+				}
+			}
+
+			SetMatchmakerStatus(LocaleUtils.UI_FINISHING_RAID_INIT.Localized());
+
+			GameWorld_0.TriggersModule = gameObject.AddComponent<LocalClientTriggersModule>();
+			GameWorld_0.FillLampControllers();
+
+			WeatherReady = true;
+			OfflineRaidSettingsMenuPatch_Override.UseCustomWeather = false;
+
+			Class442 seasonController = new();
+			GameWorld_0.GInterface29_0 = seasonController;
+
+#if DEBUG
+			Logger.LogWarning("Running season handler");
+#endif
+			Task runSeason = seasonController.Run(Season, SeasonsSettings);
+			while (!runSeason.IsCompleted)
+			{
+				yield return new WaitForEndOfFrame();
+			}
+			yield return base.vmethod_5(runCallback);
 		}
 
 		private async Task GetWeather()

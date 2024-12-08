@@ -22,7 +22,6 @@ using SPT.Common.Http;
 using SPT.Custom.Patches;
 using SPT.Custom.Utils;
 using SPT.SinglePlayer.Patches.MainMenu;
-using SPT.SinglePlayer.Patches.RaidFix;
 using SPT.SinglePlayer.Patches.ScavMode;
 using System;
 using System.Collections;
@@ -51,7 +50,7 @@ namespace Fika.Core
 	[BepInDependency("com.SPT.debugging", BepInDependency.DependencyFlags.HardDependency)] // This is used so that we guarantee to load after spt-debugging, that way we can disable its patches
 	public class FikaPlugin : BaseUnityPlugin
 	{
-		public const string FikaVersion = "1.0.4";
+		public const string FikaVersion = "1.0.3";
 		public static FikaPlugin Instance;
 		public static InternalBundleLoader BundleLoaderPlugin { get; private set; }
 		public static string EFTVersionMajor { get; internal set; }
@@ -195,9 +194,6 @@ namespace Fika.Core
 		public static ConfigEntry<ESmoothingRate> SmoothingRate { get; set; }
 
 		// Gameplay
-		public static ConfigEntry<float> HeadDamageMultiplier { get; set; }
-		public static ConfigEntry<float> ArmpitDamageMultiplier { get; set; }
-		public static ConfigEntry<float> StomachDamageMultiplier { get; set; }
 		public static ConfigEntry<bool> DisableBotMetabolism { get; set; }
 		#endregion
 
@@ -645,7 +641,7 @@ namespace Fika.Core
             ForceIP = Config.Bind("网络", "强制IP(Force IP)", "",
                 new ConfigDescription("当托管时，强制服务器使用此IP进行广播，而不是自动尝试获取IP。留空以禁用\n若使用radmin等虚拟局域网联机工具，请填写自己联机所使用的IP", tags: new ConfigurationManagerAttributes() { Order = 8 }));
 
-            ForceBindIP = Config.Bind("网络", "强制绑定IP(Force Bind IP)", "",
+            ForceBindIP = Config.Bind("网络", "强制绑定IP(Force Bind IP)", "0.0.0.0",
                 new ConfigDescription("当托管时，强制服务器使用此本地IP启动服务器。如果您在VPN上托管，这非常有用\n若使用radmin等虚拟局域网联机工具，请填写自己联机所使用的IP", new AcceptableValueList<string>(GetLocalAddresses()), new ConfigurationManagerAttributes() { Order = 7 }));
 
             AutoRefreshRate = Config.Bind("网络", "刷新服务器房间频率", 10f,
@@ -669,20 +665,10 @@ namespace Fika.Core
 			SmoothingRate = Config.Bind("网络", "平滑率", ESmoothingRate.Medium,
 				new ConfigDescription("本地模拟落后于发送速率*平滑速率。这保证了我们在缓冲区中总是有足够的快照来缓解插值期间的延迟和抖动。\n\nLow = 1.5\nMedium = 2\nHigh = 2.5\n\n如果移动不顺畅，将此设置为“High”。不能在战局中更改。", tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
-            // Gameplay
-
-            HeadDamageMultiplier = Config.Bind("游戏玩法", "头部伤害倍率", 1f,
-                new ConfigDescription("头部受到伤害的倍数。0.2 表示 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 4 }));
-
-            ArmpitDamageMultiplier = Config.Bind("游戏玩法", "腋下伤害倍率", 1f,
-                new ConfigDescription("腋下受到伤害的倍数。0.2 表示 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 3 }));
-
-            StomachDamageMultiplier = Config.Bind("游戏玩法", "腹部伤害倍率", 1f,
-                new ConfigDescription("腹部受到伤害的倍数。0.2 表示 20%", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 2 }));
-
-            DisableBotMetabolism = Config.Bind("游戏玩法", "禁用AI新陈代谢", false,
+			// Gameplay
+			DisableBotMetabolism = Config.Bind("游戏玩法", "禁用AI新陈代谢", false,
                 new ConfigDescription("禁用AI的新陈代谢，防止它们在过长时间的战局中因能量/水分丧失而死亡", tags: new ConfigurationManagerAttributes() { Order = 1 }));
-        }
+		}
 
 		private void OfficialVersion_SettingChanged(object sender, EventArgs e)
 		{
@@ -738,7 +724,6 @@ namespace Fika.Core
 			new ScavRepAdjustmentPatch().Disable();
 			new GetProfileAtEndOfRaidPatch().Disable();
 			new ScavExfilPatch().Disable();
-			new OverrideMaxAiAliveInRaidValuePatch().Disable();
 			new SendPlayerScavProfileToServerAfterRaidPatch().Disable();
 		}
 

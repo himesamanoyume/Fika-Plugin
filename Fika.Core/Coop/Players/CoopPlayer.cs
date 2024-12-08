@@ -212,20 +212,6 @@ namespace Fika.Core.Coop.Players
 						return;
 					}
 				}
-				if (colliderType == EBodyPartColliderType.HeadCommon)
-				{
-					damageInfo.Damage *= FikaPlugin.HeadDamageMultiplier.Value;
-				}
-
-				if (colliderType is EBodyPartColliderType.RightSideChestUp or EBodyPartColliderType.LeftSideChestUp)
-				{
-					damageInfo.Damage *= FikaPlugin.ArmpitDamageMultiplier.Value;
-				}
-
-				if (bodyPartType is EBodyPart.Stomach)
-				{
-					damageInfo.Damage *= FikaPlugin.StomachDamageMultiplier.Value;
-				}
 			}
 
 			if (damageInfo.Weapon != null)
@@ -445,6 +431,10 @@ namespace Fika.Core.Coop.Players
 			{
 				return;
 			}
+
+#if DEBUG
+			FikaPlugin.Instance.FikaLogger.LogWarning($"HandleTeammateKill: Weapon {(damage.Weapon != null ? damage.Weapon.Name.Localized() : "None")}"); 
+#endif
 
 			if (role != WildSpawnType.pmcBEAR)
 			{
@@ -829,35 +819,11 @@ namespace Fika.Core.Coop.Players
 			}
 		}
 
-		private void FindKillerWeapon()
-		{
-			GStruct448<Item> itemResult = FindItemById(lastWeaponId, false, false);
-			if (!itemResult.Succeeded)
-			{
-				foreach (ThrowWeapItemClass grenadeClass in Singleton<IFikaNetworkManager>.Instance.CoopHandler.LocalGameInstance.ThrownGrenades)
-				{
-					if (grenadeClass.Id == lastWeaponId)
-					{
-						LastDamageInfo.Weapon = grenadeClass;
-						break;
-					}
-				}
-				return;
-			}
-
-			LastDamageInfo.Weapon = itemResult.Value;
-		}
-
 		/// <summary>
 		/// TODO: Refactor... BSG code makes this difficult
 		/// </summary>
 		private void GenerateDogtagDetails()
 		{
-			if (LastDamageInfo.Weapon is null && !string.IsNullOrEmpty(lastWeaponId))
-			{
-				FindKillerWeapon();
-			}
-
 			string accountId = AccountId;
 			string profileId = ProfileId;
 			string nickname = Profile.Nickname;
@@ -1398,15 +1364,6 @@ namespace Fika.Core.Coop.Players
 					traderInfo.SetServiceAvailability(serviceData.ServiceType, service.CanAfford, service.WasPurchasedInThisRaid);
 				}
 			}
-		}
-
-		public override void OnGameSessionEnd(ExitStatus exitStatus, float pastTime, string locationId, string exitName)
-		{
-			if (AbstractQuestControllerClass is CoopClientSharedQuestController sharedController)
-			{
-				sharedController.ManageQuestStatusesForPveOfflineGameEnd();
-			}
-			base.OnGameSessionEnd(exitStatus, pastTime, locationId, exitName);
 		}
 
 		public Item FindQuestItem(string itemId)
