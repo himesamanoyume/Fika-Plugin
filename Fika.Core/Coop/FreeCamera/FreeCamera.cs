@@ -123,7 +123,7 @@ namespace Fika.Core.Coop.FreeCamera
 				{
 					GUILayout.Label($"G: 分离相机");
 				}
-				GUILayout.Label($"T: T: 传送到摄像机位置");
+				GUILayout.Label($"T: 传送到摄像机位置");
 				GUILayout.Label($"N: {visionText}");
 				GUILayout.Label($"M: 关闭物体剔除");
 				GUILayout.Label($"HOME: {(disableInput ? "启用输入" : "禁用输入")}");

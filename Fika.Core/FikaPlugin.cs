@@ -227,9 +227,9 @@ namespace Fika.Core
 			EnableFikaPatches();
 			gameObject.AddComponent<MainThreadDispatcher>();
 
-#if GOLDMASTER
+// #if GOLDMASTER
             new TOS_Patch().Enable();
-#endif
+// #endif
 			SetupConfigEventHandlers();
 
 			DisableSPTPatches();

@@ -20,7 +20,7 @@ namespace Fika.Core.UI.Patches
 			GameObject ____availableState)
 		{
 			____buttonLabel.text = "版本 v1.3";
-			____buttonDescription.text = $"{ColorizeText(EColor.BLUE, "Miyako")} Tarkov By 姫様の夢";
+			____buttonDescription.text = $"{ColorizeText(EColor.BLUE, "MIYAKO")} TARKOV By 姫様の夢";
 			____buttonDescriptionIcon.gameObject.SetActive(false);
 			____availableState.SetActive(true);
 			return false;
