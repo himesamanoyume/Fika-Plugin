@@ -3,7 +3,4 @@
   <PropertyGroup>
     <ProjectView>ShowAllFiles</ProjectView>
   </PropertyGroup>
-  <PropertyGroup>
-    <ReferencePath>D:\CrackedGames\SPT3.10.X\MiyakoTarkov v1.3\BepInEx\core\;D:\CrackedGames\SPT3.10.X\MiyakoTarkov v1.3\BepInEx\patchers\;D:\CrackedGames\SPT3.10.X\MiyakoTarkov v1.3\BepInEx\plugins\;D:\CrackedGames\SPT3.10.X\MiyakoTarkov v1.3\BepInEx\plugins\spt\;D:\CrackedGames\SPT3.10.X\MiyakoTarkov v1.3\BepInEx\plugins\UnityToolkit\;D:\CrackedGames\SPT3.10.X\MiyakoTarkov v1.3\EscapeFromTarkov_Data\Managed\</ReferencePath>
-  </PropertyGroup>
 </Project>
