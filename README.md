@@ -1,3 +1,6 @@
+![1](/1.png)
+![2](/2.png)
+
 # Fika - Bepinex plugin
 
 [![Discord](https://img.shields.io/discord/1202292159366037545?style=plastic&logo=discord&logoColor=FFFFFF&label=Fika%20Discord)](https://discord.gg/project-fika)
