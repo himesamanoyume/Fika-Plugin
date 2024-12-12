@@ -901,30 +901,67 @@ namespace Fika.Core.Coop.Players
 			LastDamagedBodyPart = packet.BodyPartType;
 		}
 
-		public override void OnBeenKilledByAggressor(IPlayer aggressor, DamageInfoStruct DamageInfo, EBodyPart bodyPart, EDamageType lethalDamageType)
+		public override void OnBeenKilledByAggressor(IPlayer aggressor, DamageInfoStruct damageInfo, EBodyPart bodyPart, EDamageType lethalDamageType)
 		{
 			// Only handle if it was ourselves as otherwise it's irrelevant
 			if (LastAggressor.IsYourPlayer)
 			{
-				base.OnBeenKilledByAggressor(aggressor, DamageInfo, bodyPart, lethalDamageType);
+				base.OnBeenKilledByAggressor(aggressor, damageInfo, bodyPart, lethalDamageType);
 				return;
 			}
 
-			if (FikaPlugin.Instance.SharedQuestProgression && FikaPlugin.EasyKillConditions.Value)
+			if (aggressor.GroupId == "Fika" && !aggressor.IsYourPlayer)
 			{
-				if (aggressor.GroupId == "Fika" && !aggressor.IsYourPlayer)
+				CoopPlayer mainPlayer = (CoopPlayer)Singleton<GameWorld>.Instance.MainPlayer;
+				if (mainPlayer == null)
+				{
+					return;
+				}
+
+				if (!mainPlayer.HealthController.IsAlive)
+				{
+					return;
+				}
+
+				WildSpawnType role = Profile.Info.Settings.Role;
+				bool countAsBoss = role.CountAsBossForStatistics() && !(role is WildSpawnType.pmcUSEC or WildSpawnType.pmcBEAR);
+				int experience = Profile.Info.Settings.Experience;
+
+				if (experience < 0)
+				{
+					experience = Singleton<BackendConfigSettingsClass>.Instance.Experience.Kill.VictimBotLevelExp;
+				}
+
+				if (FikaPlugin.SharedKillExperience.Value && !countAsBoss)
+				{
+					int toReceive = experience / 2;
+#if DEBUG
+				FikaPlugin.Instance.FikaLogger.LogInfo($"Received shared kill XP of {toReceive} from {aggressor.Profile.Nickname}");
+#endif
+					mainPlayer.Profile.EftStats.SessionCounters.AddLong(1L, SessionCounterTypesAbstractClass.Kills);
+					mainPlayer.Profile.EftStats.SessionCounters.AddInt(toReceive, SessionCounterTypesAbstractClass.ExpKillBase);
+				}
+
+				if (FikaPlugin.SharedBossExperience.Value && countAsBoss)
+				{
+					int toReceive = experience / 2;
+#if DEBUG
+					FikaPlugin.Instance.FikaLogger.LogInfo($"Received shared boss XP of {toReceive} from {aggressor.Profile.Nickname}");
+#endif
+					mainPlayer.Profile.EftStats.SessionCounters.AddLong(1L, SessionCounterTypesAbstractClass.Kills);
+					mainPlayer.Profile.EftStats.SessionCounters.AddInt(toReceive, SessionCounterTypesAbstractClass.ExpKillBase);
+				}
+
+				if (FikaPlugin.Instance.SharedQuestProgression && FikaPlugin.EasyKillConditions.Value)
 				{
 #if DEBUG
 					FikaPlugin.Instance.FikaLogger.LogInfo("Handling teammate kill from teammate: " + aggressor.Profile.Nickname);
 #endif
-					CoopPlayer mainPlayer = (CoopPlayer)Singleton<GameWorld>.Instance.MainPlayer;
-					if (mainPlayer != null)
-					{
-						float distance = Vector3.Distance(aggressor.Position, Position);
-						mainPlayer.HandleTeammateKill(ref DamageInfo, bodyPart, Side, Profile.Info.Settings.Role, ProfileId,
-							distance, Inventory.EquippedInSlotsTemplateIds, HealthController.BodyPartEffects, TriggerZones,
-							(CoopPlayer)aggressor, Profile.Info.Settings.Experience);
-					}
+
+					float distance = Vector3.Distance(aggressor.Position, Position);
+					mainPlayer.HandleTeammateKill(ref damageInfo, bodyPart, Side, role, ProfileId,
+						distance, Inventory.EquippedInSlotsTemplateIds, HealthController.BodyPartEffects, TriggerZones,
+						(CoopPlayer)aggressor);
 				}
 			}
 		}
