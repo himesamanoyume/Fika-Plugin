@@ -11,6 +11,7 @@ using Fika.Core.Coop.Patches.Camera;
 using Fika.Core.Coop.Patches.Lighthouse;
 using Fika.Core.Coop.Patches.SPTBugs;
 using Fika.Core.EssentialPatches;
+using Fika.Core.Models;
 using Fika.Core.Networking.Http;
 using Fika.Core.Networking.Websocket;
 using Fika.Core.UI;
@@ -67,7 +68,7 @@ namespace Fika.Core
 		public string[] LocalIPs;
 		public IPAddress WanIP;
 
-		private static readonly Version RequiredServerVersion = new("2.3.0");
+		private static readonly Version RequiredServerVersion = new("2.3.1");
 
 		public static DedicatedRaidWebSocketClient DedicatedRaidWebSocket { get; set; }
 
@@ -208,6 +209,7 @@ namespace Fika.Core
 		public bool UseInertia;
 		public bool SharedQuestProgression;
 		public bool CanEditRaidSettings;
+		public bool EnableTransits;
 		#endregion
 
 		#region natpunch config
@@ -338,6 +340,7 @@ namespace Fika.Core
 			new TransitControllerAbstractClass_Exist_Patch().Enable();
 			new BotReload_method_1_Patch().Enable();
 			new Class1374_ReloadBackendLocale_Patch().Enable();
+			new GClass2013_method_0_Patch().Enable();
 #if DEBUG
 			TasksExtensions_HandleFinishedTask_Patches.Enable();
 			new GClass1640_method_0_Patch().Enable();
@@ -403,6 +406,7 @@ namespace Fika.Core
 			UseInertia = clientConfig.UseInertia;
 			SharedQuestProgression = clientConfig.SharedQuestProgression;
 			CanEditRaidSettings = clientConfig.CanEditRaidSettings;
+			EnableTransits = clientConfig.EnableTransits;
 
 			clientConfig.LogValues();
 		}
