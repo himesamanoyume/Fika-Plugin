@@ -50,6 +50,8 @@ public class MatchMakerUI : MonoBehaviour
 	public TextMeshProUGUI LoadingScreenHeaderText;
 	[SerializeField]
 	public TextMeshProUGUI LoadingScreenInfoText;
+	[SerializeField]
+	public TextMeshProUGUI SpectatorToggleText;
 
 	protected void Awake()
 	{
