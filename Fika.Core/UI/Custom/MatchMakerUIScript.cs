@@ -158,9 +158,6 @@ namespace Fika.Core.UI.Custom
 			// Ensure the IsSpectator field is reset every time the matchmaker UI is created
 			FikaBackendUtils.IsSpectator = false;
 
-			fikaMatchMakerUi.SpectatorToggleText = fikaMatchMakerUi.SpectatorToggle.GetComponentInChildren<TextMeshProUGUI>();
-			fikaMatchMakerUi.SpectatorToggleText.text = "作为观战者加入";
-
 			fikaMatchMakerUi.SpectatorToggle.isOn = false;
 			fikaMatchMakerUi.SpectatorToggle.onValueChanged.AddListener((arg) =>
 			{
