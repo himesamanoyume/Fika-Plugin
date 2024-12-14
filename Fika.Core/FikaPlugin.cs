@@ -474,7 +474,7 @@ namespace Fika.Core
 			ExtractKey = Config.Bind(coopHeader, LocaleUtils.BEPINEX_EXTRACT_KEY_T.Localized(), new KeyboardShortcut(KeyCode.F8),
 				new ConfigDescription(LocaleUtils.BEPINEX_EXTRACT_KEY_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 4 }));
 
-			EnableChat = Config.Bind(coopHeader, LocaleUtils.BEPINEX_ENABLE_CHAT_T.Localized(), false,
+			EnableChat = Config.Bind(coopHeader, LocaleUtils.BEPINEX_ENABLE_CHAT_T.Localized(), true,
 				new ConfigDescription(LocaleUtils.BEPINEX_ENABLE_CHAT_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
 			ChatKey = Config.Bind(coopHeader, LocaleUtils.BEPINEX_CHAT_KEY_T.Localized(), new KeyboardShortcut(KeyCode.RightControl),
@@ -491,13 +491,13 @@ namespace Fika.Core
 
 			string coopNameplatesHeader = LocaleUtils.BEPINEX_H_COOP_NAME_PLATES.Localized();
 
-			UseNamePlates = Config.Bind(coopNameplatesHeader, LocaleUtils.BEPINEX_USE_NAME_PLATES_T.Localized(), false,
+			UseNamePlates = Config.Bind(coopNameplatesHeader, LocaleUtils.BEPINEX_USE_NAME_PLATES_T.Localized(), true,
 				new ConfigDescription(LocaleUtils.BEPINEX_USE_NAME_PLATES_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 13 }));
 
 			HideHealthBar = Config.Bind(coopNameplatesHeader, LocaleUtils.BEPINEX_HIDE_HEALTH_BAR_T.Localized(), false,
 				new ConfigDescription(LocaleUtils.BEPINEX_HIDE_HEALTH_BAR_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 12 }));
 
-			UseHealthNumber = Config.Bind(coopNameplatesHeader, LocaleUtils.BEPINEX_USE_PERCENT_T.Localized(), false,
+			UseHealthNumber = Config.Bind(coopNameplatesHeader, LocaleUtils.BEPINEX_USE_PERCENT_T.Localized(), true,
 				new ConfigDescription(LocaleUtils.BEPINEX_USE_PERCENT_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 11 }));
 
 			ShowEffects = Config.Bind(coopNameplatesHeader, LocaleUtils.BEPINEX_SHOW_EFFECTS_T.Localized(), true,
