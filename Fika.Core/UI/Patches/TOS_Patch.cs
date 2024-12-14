@@ -3,8 +3,10 @@ using EFT;
 using EFT.UI;
 using SPT.Reflection.Patching;
 using System;
+using System.Collections;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 using static Fika.Core.UI.FikaUIGlobals;
 
@@ -28,6 +30,20 @@ namespace Fika.Core.UI.Patches
 			}
 
 			HasShown = true;
+			FikaPlugin.Instance.StartCoroutine(Display());
+		}
+
+		private static void AcceptTos()
+		{
+			FikaPlugin.AcceptedTOS.Value = true;
+		}
+
+		private static IEnumerator Display()
+		{
+			while (!FikaPlugin.Instance.LocalesLoaded)
+			{
+				yield return new WaitForEndOfFrame();
+			}
 
 			if (!FikaPlugin.AcceptedTOS.Value)
 			{
@@ -46,11 +62,6 @@ namespace Fika.Core.UI.Patches
 					null,
 					null);
 			}
-		}
-
-		private static void AcceptTos()
-		{
-			FikaPlugin.AcceptedTOS.Value = true;
 		}
 	}
 }
