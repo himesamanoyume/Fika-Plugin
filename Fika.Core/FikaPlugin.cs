@@ -643,35 +643,35 @@ namespace Fika.Core
 			string maxBotsHeader = LocaleUtils.BEPINEX_MAX_BOTS_T.Localized();
 			string maxBotsDescription = LocaleUtils.BEPINEX_MAX_BOTS_D.Localized();
 
-			MaxBotsFactory = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Factory"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Factory"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 11 }));
+			MaxBotsFactory = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "工厂"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "工厂"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 11 }));
 
-			MaxBotsCustoms = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Customs"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Customs"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 10 }));
+			MaxBotsCustoms = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "海关"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "海关"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 10 }));
 
-			MaxBotsInterchange = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Interchange"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Interchange"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 8 }));
+			MaxBotsInterchange = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "立交桥"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "立交桥"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 8 }));
 
-			MaxBotsReserve = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Reserve"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Reserve"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 7 }));
+			MaxBotsReserve = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "储备站"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "储备站"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 7 }));
 
-			MaxBotsWoods = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Woods"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Woods"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 6 }));
+			MaxBotsWoods = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "森林"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "森林"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 6 }));
 
-			MaxBotsShoreline = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Shoreline"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Shoreline"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 5 }));
+			MaxBotsShoreline = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "海岸线"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "海岸线"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 5 }));
 
-			MaxBotsStreets = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Streets"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Streets"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 4 }));
+			MaxBotsStreets = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "街区"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "街区"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 4 }));
 
-			MaxBotsGroundZero = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Ground Zero"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Ground Zero"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 3 }));
+			MaxBotsGroundZero = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "中心区"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "中心区"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 3 }));
 
-			MaxBotsLabs = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Labs"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Labs"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 2 }));
+			MaxBotsLabs = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "实验室"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "实验室"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 2 }));
 
-			MaxBotsLighthouse = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "Lighthouse"), 0,
-				new ConfigDescription(string.Format(maxBotsDescription, "Lighthouse"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 1 }));
+			MaxBotsLighthouse = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, "灯塔"), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, "灯塔"), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 1 }));
 
             // Network
 
