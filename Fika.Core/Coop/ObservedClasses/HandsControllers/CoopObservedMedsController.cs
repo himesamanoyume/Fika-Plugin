@@ -64,7 +64,7 @@ namespace Fika.Core.Coop.ObservedClasses
 		private Player.BaseAnimationOperation GetObservedMedsOperation()
 		{
 			return new ObservedMedsOperation(this);
-		}
+		}		
 
 		public override bool CanChangeCompassState(bool newState)
 		{
@@ -81,6 +81,16 @@ namespace Fika.Core.Coop.ObservedClasses
 			// Do nothing
 		}
 
+		public override void FastForwardCurrentState()
+		{
+			ObservedObsOperation.FastForwardObserved();
+		}
+
+		public override void IEventsConsumerOnWeapOut()
+		{
+			ObservedObsOperation.HideObservedWeaponComplete();
+		}
+
 		private class ObservedMedsOperation(Player.MedsController controller) : Class1158(controller)
 		{
 			private readonly CoopObservedMedsController observedMedsController = (CoopObservedMedsController)controller;
@@ -90,7 +100,6 @@ namespace Fika.Core.Coop.ObservedClasses
 				State = Player.EOperationState.Executing;
 				SetLeftStanceAnimOnStartOperation();
 				callback();
-				observedMedsController.coopPlayer.HealthController.EffectRemovedEvent += method_2;
 				observedMedsController.FirearmsAnimator.SetActiveParam(true, false);
 			}
 
@@ -99,6 +108,19 @@ namespace Fika.Core.Coop.ObservedClasses
 				if (observedMedsController != null && observedMedsController.FirearmsAnimator != null)
 				{
 					observedMedsController.FirearmsAnimator.SetActiveParam(false, false);
+				}
+			}
+
+			public void HideObservedWeaponComplete()
+			{
+				State = Player.EOperationState.Finished;
+			}
+
+			public void FastForwardObserved()
+			{
+				if (State != Player.EOperationState.Finished)
+				{
+					HideObservedWeaponComplete();
 				}
 			}
 		}
