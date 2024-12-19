@@ -49,7 +49,7 @@ namespace Fika.Core.UI.Patches
 			{
 				// byte[] str_1_b = Convert.FromBase64String(str_1);
 				// string str_1_d = Encoding.UTF8.GetString(str_1_b);
-				string str_1_d = "欢迎来到MIYAKO TARKOV！\n\nFika 是一个SPT的合作模组，允许您与朋友一起玩。 如果您为此付了钱，说明你被骗了，Fika是免费的。 您也不允许建立付费或需要捐赠的公共服务器。\n\n等待此消息自动消失来接受Fika的服务条款。\n\n";
+				string str_1_d = "欢迎来到MIYAKO TARKOV！\n\nFika 是一个SPT的合作模组，允许您与朋友一起玩。 如果您为此付了钱，说明你被骗了，Fika是免费的。 您也不允许建立付费或需要捐赠的公共服务器。\n\n等待此消息自动消失来接受Fika的服务条款。";
 				Singleton<PreloaderUI>.Instance.ShowFikaMessage($"{ColorizeText(EColor.BLUE, "MIYAKO")} TARKOV", str_1_d, ErrorScreen.EButtonType.QuitButton, 30f,
 					Application.Quit, AcceptTos);
 			}

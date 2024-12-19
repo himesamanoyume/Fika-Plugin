@@ -18,7 +18,7 @@ public class MainMenuUIPlayer : MonoBehaviour
 	public void SetActivity(string nickname, int level, EFikaPlayerPresence presence)
 	{
 		PlayerName.text = nickname;
-		PlayerLevel.text = $"({level})";
+		PlayerLevel.text = $"({level}级)";
 		string status = presence switch
 		{
 			EFikaPlayerPresence.IN_MENU => LocaleUtils.UI_MMUI_IN_MENU.Localized(),
