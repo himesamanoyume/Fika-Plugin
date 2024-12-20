@@ -61,6 +61,7 @@ namespace Fika.Core.Coop.Players
 		}
 
 		protected string lastWeaponId;
+		private bool shouldSendSideEffect;
 
 		public ClientMovementContext ClientMovementContext
 		{
@@ -445,26 +446,37 @@ namespace Fika.Core.Coop.Players
 			}
 		}
 
-		protected void FindKillerWeapon()
+		protected Item FindWeapon()
 		{
 #if DEBUG
 			FikaPlugin.Instance.FikaLogger.LogWarning($"Finding weapon '{lastWeaponId}'!");
 #endif
 			GStruct448<Item> itemResult = FindItemById(lastWeaponId, false, false);
+			Item item = itemResult.Value;
 			if (!itemResult.Succeeded)
 			{
 				foreach (ThrowWeapItemClass grenadeClass in Singleton<IFikaNetworkManager>.Instance.CoopHandler.LocalGameInstance.ThrownGrenades)
 				{
 					if (grenadeClass.Id == lastWeaponId)
 					{
-						LastDamageInfo.Weapon = grenadeClass;
+						item = grenadeClass;
 						break;
 					}
 				}
-				return;
 			}
 
-			LastDamageInfo.Weapon = itemResult.Value;
+			return item;
+		}
+
+		protected void FindKillerWeapon()
+		{
+			Item item = FindWeapon();
+			if (item == null)
+			{
+				FikaPlugin.Instance.FikaLogger.LogError($"Could not find killer weapon: {lastWeaponId}!");
+				return;
+			}
+			LastDamageInfo.Weapon = item;
 		}
 
 		public void HandleTeammateKill(ref DamageInfoStruct damage, EBodyPart bodyPart,
@@ -1338,9 +1350,39 @@ namespace Fika.Core.Coop.Players
 				lastWeaponId = packet.WeaponId;
 			}
 
+			if (damageInfo.DamageType == EDamageType.Melee && !string.IsNullOrEmpty(lastWeaponId))
+			{
+				Item item = FindWeapon();
+				if (item != null)
+				{
+					damageInfo.Weapon = item;
+					(damageInfo.Player.iPlayer as CoopPlayer).shouldSendSideEffect = true;
+#if DEBUG
+					FikaPlugin.Instance.FikaLogger.LogWarning("Found weapon for knife damage: " + item.Name.Localized()); 
+#endif
+				}
+			}
+
 			ShotReactions(damageInfo, packet.BodyPartType);
 			ReceiveDamage(damageInfo.Damage, packet.BodyPartType, damageInfo.DamageType, packet.Absorbed, packet.Material);
 			base.ApplyDamageInfo(damageInfo, packet.BodyPartType, packet.ColliderType, packet.Absorbed);
+		}
+
+		public override void OnSideEffectApplied(SideEffectComponent sideEffect)
+		{
+			if (!shouldSendSideEffect)
+			{
+				return;
+			}
+
+			SideEffectPacket packet = new()
+			{
+				ItemId = sideEffect.Item.Id,
+				Value = sideEffect.Value
+			};
+
+			PacketSender.SendPacket(ref packet, true);
+			shouldSendSideEffect = false;
 		}
 
 		public void HandleArmorDamagePacket(ref ArmorDamagePacket packet)

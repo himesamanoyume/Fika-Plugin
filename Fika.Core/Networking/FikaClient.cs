@@ -8,6 +8,7 @@ using EFT.AssetsManager;
 using EFT.Communications;
 using EFT.GlobalEvents;
 using EFT.Interactive;
+using EFT.InventoryLogic;
 using EFT.SynchronizableObjects;
 using EFT.UI;
 using EFT.Vehicle;
@@ -22,9 +23,7 @@ using Fika.Core.Coop.Players;
 using Fika.Core.Coop.Utils;
 using Fika.Core.Modding;
 using Fika.Core.Modding.Events;
-using Fika.Core.Networking.Packets;
 using Fika.Core.Utils;
-using FlyingWormConsole3;
 using HarmonyLib;
 using LiteNetLib;
 using LiteNetLib.Utils;
@@ -46,7 +45,6 @@ namespace Fika.Core.Networking
 		public CoopPlayer MyPlayer;
 		public int Ping = 0;
 		public int ServerFPS = 0;
-		public int ConnectedClients = 0;
 		public int ReadyClients = 0;
 		public bool HostReady = false;
 		public bool HostLoaded = false;
@@ -161,6 +159,7 @@ namespace Fika.Core.Networking
 			packetProcessor.SubscribeNetSerializable<LootSyncPacket>(OnLootSyncPacketReceived);
 			packetProcessor.SubscribeNetSerializable<LoadingProfilePacket>(OnLoadingProfilePacketReceived);
 			packetProcessor.SubscribeNetSerializable<CorpsePositionPacket>(OnCorpsePositionPacketReceived);
+			packetProcessor.SubscribeNetSerializable<SideEffectPacket>(OnSideEffectPacketReceived);
 
 #if DEBUG
 			AddDebugPackets();
@@ -210,6 +209,34 @@ namespace Fika.Core.Networking
 			}
 
 			FikaEventDispatcher.DispatchEvent(new FikaNetworkManagerCreatedEvent(this));
+		}
+
+		private void OnSideEffectPacketReceived(SideEffectPacket packet)
+		{
+#if DEBUG
+			logger.LogWarning("OnSideEffectPacketReceived: Received"); 
+#endif
+			GameWorld gameWorld = Singleton<GameWorld>.Instance;
+			if (gameWorld == null)
+			{
+				logger.LogError("OnSideEffectPacketReceived: GameWorld was null!");
+				return;
+			}
+
+			GStruct448<Item> gstruct2 = gameWorld.FindItemById(packet.ItemId);
+			if (gstruct2.Failed)
+			{
+				logger.LogError("OnSideEffectPacketReceived: " + gstruct2.Error);
+				return;
+			}
+			Item item = gstruct2.Value;
+			if (item.TryGetItemComponent(out SideEffectComponent sideEffectComponent))
+			{
+				sideEffectComponent.Value = packet.Value;
+				item.RaiseRefreshEvent(false, false);
+				return;
+			}
+			logger.LogError("OnSideEffectPacketReceived: SideEffectComponent was not found!");
 		}
 
 		private void OnCorpsePositionPacketReceived(CorpsePositionPacket packet)
@@ -1060,18 +1087,22 @@ namespace Fika.Core.Networking
 
 		private void OnInformationPacketReceived(InformationPacket packet)
 		{
-			if (!packet.IsRequest)
+			CoopGame coopGame = CoopHandler.LocalGameInstance;
+			if (coopGame != null)
 			{
-				ConnectedClients = packet.NumberOfPlayers;
-				ReadyClients = packet.ReadyPlayers;
-				HostReady = packet.HostReady;
-				HostLoaded = packet.HostLoaded;
+				coopGame.RaidStarted = packet.RaidStarted;
+			}
+			ReadyClients = packet.ReadyPlayers;
+			HostReady = packet.HostReady;
+			HostLoaded = packet.HostLoaded;
+			if (packet.AmountOfPeers > 0)
+			{
+				FikaBackendUtils.HostExpectedNumberOfPlayers = packet.AmountOfPeers;
+			}
 
-				if (packet.HostReady)
-				{
-					CoopGame coopGame = (CoopGame)Singleton<IFikaGame>.Instance;
-					coopGame.SetClientTime(packet.GameTime, packet.SessionTime);
-				}
+			if (packet.HostReady)
+			{
+				coopGame.SetClientTime(packet.GameTime, packet.SessionTime);
 			}
 		}
 

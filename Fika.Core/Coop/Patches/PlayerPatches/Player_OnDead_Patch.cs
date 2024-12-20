@@ -10,11 +10,12 @@ namespace Fika.Core.Coop.Patches
 	/// <summary>
 	/// This patch stops BSGs dogtag handling as it is poorly executed
 	/// </summary>
-	public class Player_SetDogtagInfo_Patch : ModulePatch
+	public class Player_OnDead_Patch : ModulePatch
 	{
 		protected override MethodBase GetTargetMethod()
 		{
-			return typeof(Player).GetMethod(nameof(Player.SetDogtagInfo));
+			//Check for gclass increments
+			return typeof(LocalPlayer).GetMethod(nameof(LocalPlayer.OnDead));
 		}
 
 		[PatchTranspiler]
@@ -23,8 +24,11 @@ namespace Fika.Core.Coop.Patches
 			// Create a new set of instructions
 			List<CodeInstruction> instructionsList =
 			[
-				new CodeInstruction(OpCodes.Ret) // Return immediately
-            ];
+				new CodeInstruction(OpCodes.Ldarg_0),
+				new CodeInstruction(OpCodes.Ldarg_1),
+				new CodeInstruction(OpCodes.Call, typeof(Player).GetMethod(nameof(Player.OnDead))),
+				new CodeInstruction(OpCodes.Ret)
+			];
 
 			return instructionsList;
 		}
