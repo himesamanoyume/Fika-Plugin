@@ -65,6 +65,7 @@ namespace Fika.Core.Coop.GameMode
 		public bool HasReceivedLoot { get; set; } = false;
 		public List<ThrowWeapItemClass> ThrownGrenades;
 		public bool WeatherReady;
+		public bool RaidStarted { get; set; }
 
 		private readonly Dictionary<int, int> botQueue = [];
 		private Coroutine extractRoutine;
@@ -368,7 +369,7 @@ namespace Fika.Core.Coop.GameMode
 			FikaServer server = Singleton<FikaServer>.Instance;
 			netId = server.PopNetId();
 
-			MongoID mongoId = new(profile);
+			MongoID mongoId = MongoID.Generate(true);
 			ushort nextOperationId = 0;
 			SendCharacterPacket packet = new(new()
 			{
@@ -572,17 +573,18 @@ namespace Fika.Core.Coop.GameMode
 			else
 			{
 				FikaServer server = Singleton<FikaServer>.Instance;
+				server.RaidStarted = true;
 
 				DateTime startTime = EFTDateTimeClass.UtcNow.AddSeconds((double)timeBeforeDeployLocal);
 				gameTime = startTime;
 				server.GameStartTime = startTime;
 				sessionTime = GameTimer.SessionTime;
 
-				InformationPacket packet = new(false)
+				InformationPacket packet = new()
 				{
-					NumberOfPlayers = server.NetServer.ConnectedPeersCount,
+					RaidStarted = RaidStarted,
 					ReadyPlayers = server.ReadyClients,
-					HostReady = true,
+					HostReady = server.RaidStarted,
 					GameTime = gameTime.Value,
 					SessionTime = sessionTime.Value
 				};
@@ -614,7 +616,10 @@ namespace Fika.Core.Coop.GameMode
 			TransitControllerAbstractClass transitController = Singleton<GameWorld>.Instance.TransitController;
 			if (transitController == null)
 			{
-				Logger.LogError("SyncTransitControllers: TransitController was null!");
+				if (FikaPlugin.Instance.EnableTransits)
+				{
+					Logger.LogError("SyncTransitControllers: TransitController was null!"); 
+				}
 				return;
 			}
 
@@ -646,10 +651,10 @@ namespace Fika.Core.Coop.GameMode
 		/// This task ensures that all players are joined and loaded before continuing
 		/// </summary>
 		/// <returns></returns>
-		private async Task WaitForOtherPlayers()
+		private async Task WaitForOtherPlayersToLoad()
 		{
 #if DEBUG
-			Logger.LogWarning("Starting " + nameof(WaitForOtherPlayers));
+			Logger.LogWarning("Starting " + nameof(WaitForOtherPlayersToLoad));
 #endif
 			if (CoopHandler.TryGetCoopHandler(out CoopHandler coopHandler))
 			{
@@ -666,6 +671,7 @@ namespace Fika.Core.Coop.GameMode
 
 				float expectedPlayers = FikaBackendUtils.HostExpectedNumberOfPlayers;
 				SetMatchmakerStatus(LocaleUtils.UI_WAIT_FOR_OTHER_PLAYERS.Localized());
+				Logger.LogInfo("Waiting for other players to finish loading...");
 
 				if (isServer)
 				{
@@ -680,9 +686,9 @@ namespace Fika.Core.Coop.GameMode
 						SetMatchmakerStatus(LocaleUtils.UI_WAIT_FOR_OTHER_PLAYERS.Localized(), (float)server.ReadyClients / expectedPlayers);
 					} while (coopHandler.AmountOfHumans < expectedPlayers);
 
-					InformationPacket packet = new(false)
+					InformationPacket packet = new()
 					{
-						NumberOfPlayers = server.NetServer.ConnectedPeersCount,
+						RaidStarted = RaidStarted,
 						ReadyPlayers = server.ReadyClients
 					};
 
@@ -708,9 +714,9 @@ namespace Fika.Core.Coop.GameMode
 						DynamicAI.AddHumans();
 					}
 
-					InformationPacket finalPacket = new(false)
+					InformationPacket finalPacket = new()
 					{
-						NumberOfPlayers = server.NetServer.ConnectedPeersCount,
+						RaidStarted = RaidStarted,
 						ReadyPlayers = server.ReadyClients
 					};
 
@@ -729,7 +735,7 @@ namespace Fika.Core.Coop.GameMode
 					} while (coopHandler.AmountOfHumans < expectedPlayers);
 
 
-					InformationPacket packet = new(true)
+					InformationPacket packet = new()
 					{
 						ReadyPlayers = 1
 					};
@@ -931,6 +937,51 @@ namespace Fika.Core.Coop.GameMode
 		/// <param name="coopPlayer"></param>
 		/// <param name="customButton"></param>
 		/// <returns></returns>
+		private GameObject CreateStartButton()
+		{
+			if (MenuUI.Instantiated)
+			{
+				MenuUI menuUI = MenuUI.Instance;
+				DefaultUIButton backButton = Traverse.Create(menuUI.MatchmakerTimeHasCome).Field<DefaultUIButton>("_cancelButton").Value;
+				GameObject customButton = Instantiate(backButton.gameObject, backButton.gameObject.transform.parent);
+				customButton.gameObject.name = "FikaStartButton";
+				//customButton.gameObject.transform.position = new(customButton.transform.position.x, customButton.transform.position.y - 20, customButton.transform.position.z);
+				customButton.gameObject.SetActive(true);
+				DefaultUIButton backButtonComponent = customButton.GetComponent<DefaultUIButton>();
+				backButtonComponent.SetHeaderText(LocaleUtils.UI_START_RAID.Localized(), 32);
+				backButtonComponent.SetEnabledTooltip(LocaleUtils.UI_START_RAID_DESCRIPTION.Localized());
+				UnityEngine.Events.UnityEvent newEvent = new();
+				newEvent.AddListener(() =>
+				{
+					if (isServer)
+					{
+						RaidStarted = true;
+						FikaBackendUtils.HostExpectedNumberOfPlayers = Singleton<FikaServer>.Instance.NetServer.ConnectedPeersCount + 1;
+						return;
+					}
+
+					FikaClient fikaClient = Singleton<FikaClient>.Instance ?? throw new NullReferenceException("CreateStartButton::FikaClient was null!");
+					InformationPacket packet = new()
+					{
+						RequestStart = true
+					};
+					fikaClient.SendData(ref packet, DeliveryMethod.ReliableOrdered);
+				});
+				Traverse.Create(backButtonComponent).Field("OnClick").SetValue(newEvent);
+
+				return customButton;
+			}
+
+			return null;
+		}
+
+		/// <summary>
+		/// This creates a "custom" Back button so that we can back out if we get stuck
+		/// </summary>
+		/// <param name="myPlayer"></param>
+		/// <param name="coopPlayer"></param>
+		/// <param name="customButton"></param>
+		/// <returns></returns>
 		private GameObject CreateCancelButton(LocalPlayer myPlayer, GameObject customButton)
 		{
 			if (myPlayer.Side is EPlayerSide.Savage)
@@ -1059,7 +1110,7 @@ namespace Fika.Core.Coop.GameMode
 				BackendConfigSettingsClass.GClass1529 transitSettings = instance.transitSettings;
 				transitActive = transitSettings != null && transitSettings.active;
 			}
-			if (transitActive)
+			if (transitActive && FikaPlugin.Instance.EnableTransits)
 			{
 				gameWorld.TransitController = isServer ? new FikaHostTransitController(instance.transitSettings, Location_0.transitParameters,
 					Profile_0, localRaidSettings_0) : new FikaClientTransitController(instance.transitSettings, Location_0.transitParameters,
@@ -1067,6 +1118,7 @@ namespace Fika.Core.Coop.GameMode
 			}
 			else
 			{
+				Logger.LogInfo("Transits are disabled");
 				TransitControllerAbstractClass.DisableTransitPoints();
 			}
 
@@ -1096,7 +1148,7 @@ namespace Fika.Core.Coop.GameMode
 				}
 			}
 
-			await WaitForPlayersToConnect();
+			await WaitForHostToStart();
 
 			LocationSettingsClass.Location location = localRaidSettings_0.selectedLocation;
 			if (isServer)
@@ -1158,7 +1210,7 @@ namespace Fika.Core.Coop.GameMode
 		{
 			FikaClient client = Singleton<FikaClient>.Instance;
 
-			InformationPacket packet = new(true);
+			InformationPacket packet = new();
 			do
 			{
 				SetMatchmakerStatus(LocaleUtils.UI_WAIT_FOR_HOST_INIT.Localized());
@@ -1333,88 +1385,58 @@ namespace Fika.Core.Coop.GameMode
 
 
 		/// <summary>
-		/// <see cref="Task"/> used to wait for all other players to join the game
+		/// <see cref="Task"/> used to wait for host to start the raid
 		/// </summary>
 		/// <returns></returns>
-		private async Task WaitForPlayersToConnect()
+		private async Task WaitForHostToStart()
 		{
-			Logger.LogInfo("Starting task to wait for other players.");
+			Logger.LogInfo("Starting task to wait for host to start the raid.");
 
-			SetMatchmakerStatus(LocaleUtils.UI_INIT_COOP_GAME.Localized());
-			int numbersOfPlayersToWaitFor = 0;
+			SetMatchmakerStatus("正在等待房主开始此次战局...");
 
-			string localizedPlayer = LocaleUtils.UI_WAIT_FOR_PLAYER.Localized();
-			string localizedPlayers = LocaleUtils.UI_WAIT_FOR_PLAYERS.Localized();
-
+			GameObject startButton = null;
 			if (isServer)
 			{
+				startButton = CreateStartButton() ?? throw new NullReferenceException("Start button could not be created!");
 				FikaServer server = Singleton<FikaServer>.Instance;
 				server.RaidInitialized = true;
 
-				do
+				while (!RaidStarted)
 				{
-					numbersOfPlayersToWaitFor = FikaBackendUtils.HostExpectedNumberOfPlayers - (server.NetServer.ConnectedPeersCount + 1);
-					if (numbersOfPlayersToWaitFor > 0)
-					{
-						bool multiple = numbersOfPlayersToWaitFor > 1;
-						SetMatchmakerStatus(string.Format(multiple ? localizedPlayers : localizedPlayer,
-							numbersOfPlayersToWaitFor));
-					}
-					else
-					{
-						SetMatchmakerStatus(LocaleUtils.UI_ALL_PLAYERS_JOINED.Localized());
-					}
-					await Task.Delay(100);
-				} while (numbersOfPlayersToWaitFor > 0);
+					await Task.Yield();
+				}
+
+				if (startButton != null)
+				{
+					Destroy(startButton); 
+				}
+
+				InformationPacket continuePacket = new()
+				{
+					AmountOfPeers = server.NetServer.ConnectedPeersCount + 1
+				};
+				server.SendDataToAll(ref continuePacket, DeliveryMethod.ReliableOrdered);
+				SetStatusModel status = new(FikaBackendUtils.GroupId, LobbyEntry.ELobbyStatus.IN_GAME);
+				await FikaRequestHandler.UpdateSetStatus(status);
+				return;
 			}
-			else
+
+			if (FikaBackendUtils.IsDedicatedRequester)
 			{
-				FikaClient client = Singleton<FikaClient>.Instance;
-
-				while (client.NetClient == null)
-				{
-					await Task.Delay(500);
-				}
-
-				int connectionAttempts = 0;
-
-				while (client.ServerConnection == null && connectionAttempts < 5)
-				{
-					// Server retries 10 times with a 500ms interval, we give it 5 seconds to try
-					SetMatchmakerStatus(LocaleUtils.UI_WAITING_FOR_CONNECT.Localized());
-					connectionAttempts++;
-					await Task.Delay(1000);
-
-					if (client.ServerConnection == null && connectionAttempts == 5)
-					{
-						Singleton<PreloaderUI>.Instance.ShowErrorScreen(LocaleUtils.UI_ERROR_CONNECTING.Localized(),
-							LocaleUtils.UI_ERROR_CONNECTING_TO_RAID.Localized());
-					}
-				}
-
-				while (client == null)
-				{
-					await Task.Delay(500);
-				}
-
-				InformationPacket packet = new(true);
+				startButton = CreateStartButton() ?? throw new NullReferenceException("Start button could not be created!");
+			}
+			FikaClient client = Singleton<FikaClient>.Instance;
+			InformationPacket packet = new();
+			client.SendData(ref packet, DeliveryMethod.ReliableUnordered);
+			while (!RaidStarted)
+			{
+				await Task.Delay(250);
 				client.SendData(ref packet, DeliveryMethod.ReliableUnordered);
-				do
-				{
-					numbersOfPlayersToWaitFor = FikaBackendUtils.HostExpectedNumberOfPlayers - (client.ConnectedClients + 1);
-					if (numbersOfPlayersToWaitFor > 0)
-					{
-						bool multiple = numbersOfPlayersToWaitFor > 1;
-						SetMatchmakerStatus(string.Format(multiple ? localizedPlayers : localizedPlayer,
-							numbersOfPlayersToWaitFor));
-					}
-					else
-					{
-						SetMatchmakerStatus(LocaleUtils.UI_ALL_PLAYERS_JOINED.Localized());
-					}
-					client.SendData(ref packet, DeliveryMethod.ReliableUnordered);
-					await Task.Delay(1000);
-				} while (numbersOfPlayersToWaitFor > 0);
+			}
+
+			if (startButton != null)
+			{
+				Destroy(startButton);
 			}
 		}
 
@@ -1507,9 +1529,10 @@ namespace Fika.Core.Coop.GameMode
 				DynamicAI = gameObject.AddComponent<FikaDynamicAI>();
 			}
 
-			await WaitForOtherPlayers();
+			await WaitForOtherPlayersToLoad();
 
 			SetMatchmakerStatus(LocaleUtils.UI_FINISHING_RAID_INIT.Localized());
+			Logger.LogInfo("All players are loaded, continuing...");
 
 			if (isServer)
 			{
@@ -1539,11 +1562,7 @@ namespace Fika.Core.Coop.GameMode
 				botsController_0.EventsController.SpawnAction();
 
 				FikaPlugin.DynamicAI.SettingChanged += DynamicAI_SettingChanged;
-				FikaPlugin.DynamicAIRate.SettingChanged += DynamicAIRate_SettingChanged;
-
-				SetStatusModel status = new(FikaBackendUtils.GroupId, LobbyEntry.ELobbyStatus.IN_GAME);
-
-				await FikaRequestHandler.UpdateSetStatus(status);
+				FikaPlugin.DynamicAIRate.SettingChanged += DynamicAIRate_SettingChanged;				
 			}
 
 			// Add FreeCamController to GameWorld GameObject
@@ -1568,6 +1587,7 @@ namespace Fika.Core.Coop.GameMode
 			if (WeatherController.Instance != null)
 			{
 				SetMatchmakerStatus(LocaleUtils.UI_INIT_WEATHER.Localized());
+				Logger.LogInfo("Generating and initializing weather...");
 				if (isServer)
 				{
 					Task<GClass1310> weatherTask = iSession.WeatherRequest();
@@ -2447,11 +2467,12 @@ namespace Fika.Core.Coop.GameMode
 			{
 				FikaBackendUtils.HostExpectedNumberOfPlayers = 1;
 				FikaBackendUtils.IsSpectator = false;
+				FikaBackendUtils.IsDedicatedRequester = false;
 			}
 
 			FikaBackendUtils.RequestFikaWorld = false;
 			FikaBackendUtils.IsReconnect = false;
-			FikaBackendUtils.ReconnectPosition = Vector3.zero;
+			FikaBackendUtils.ReconnectPosition = Vector3.zero;			
 		}
 
 		private class ExitManager : Class1491

@@ -136,6 +136,8 @@ namespace Fika.Core.UI.Custom
 
 		private void CreateMatchMakerUI()
 		{
+			FikaBackendUtils.IsDedicatedRequester = false;
+
 			GetDedicatedStatusResponse response = FikaRequestHandler.GetDedicatedStatus();
 
 			GameObject matchMakerUiPrefab = InternalBundleLoader.Instance.GetAssetBundle("newmatchmakerui").LoadAsset<GameObject>("NewMatchMakerUI");
@@ -270,7 +272,6 @@ namespace Fika.Core.UI.Custom
 						}
 					}
 
-					FikaBackendUtils.HostExpectedNumberOfPlayers = int.Parse(fikaMatchMakerUi.PlayerAmountText.text);
 					await FikaBackendUtils.CreateMatch(FikaBackendUtils.Profile.ProfileId, FikaBackendUtils.PMCName, raidSettings);
 					acceptButton.OnClick.Invoke();
 				}
@@ -289,7 +290,6 @@ namespace Fika.Core.UI.Custom
 
 					StartDedicatedRequest request = new()
 					{
-						ExpectedNumPlayers = int.Parse(fikaMatchMakerUi.PlayerAmountText.text),
 						Time = raidSettings.SelectedDateTime,
 						LocationId = raidSettings.SelectedLocation._Id,
 						SpawnPlace = raidSettings.PlayersSpawnPlace,
@@ -302,12 +302,13 @@ namespace Fika.Core.UI.Custom
 					};
 
 					StartDedicatedResponse response = await FikaRequestHandler.StartDedicated(request);
+					FikaBackendUtils.IsDedicatedRequester = true;
 
 					if (!string.IsNullOrEmpty(response.Error))
 					{
 						PreloaderUI.Instance.ShowErrorScreen(LocaleUtils.UI_DEDICATED_ERROR.Localized(), response.Error);
-
 						ToggleLoading(false);
+						FikaBackendUtils.IsDedicatedRequester = false;
 					}
 					else
 					{
@@ -447,7 +448,6 @@ namespace Fika.Core.UI.Custom
 			{
 				FikaBackendUtils.GroupId = result.ServerId;
 				FikaBackendUtils.MatchingType = EMatchmakerType.GroupPlayer;
-				FikaBackendUtils.HostExpectedNumberOfPlayers = result.ExpectedNumberOfPlayers;
 
 				AddPlayerRequest data = new(FikaBackendUtils.GroupId, profileId, FikaBackendUtils.IsSpectator);
 				FikaRequestHandler.UpdateAddPlayer(data);
@@ -684,7 +684,7 @@ namespace Fika.Core.UI.Custom
 			{
 				AutoRefresh();
 
-				while (Time.time < lastRefreshed + FikaPlugin.AutoRefreshRate.Value)
+				while (Time.time < lastRefreshed + 5)
 				{
 					yield return null;
 				}

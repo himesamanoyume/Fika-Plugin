@@ -11,6 +11,7 @@ using Fika.Core.Coop.Patches.Camera;
 using Fika.Core.Coop.Patches.Lighthouse;
 using Fika.Core.Coop.Patches.SPTBugs;
 using Fika.Core.EssentialPatches;
+using Fika.Core.Models;
 using Fika.Core.Networking.Http;
 using Fika.Core.Networking.Websocket;
 using Fika.Core.UI;
@@ -22,6 +23,7 @@ using SPT.Common.Http;
 using SPT.Custom.Patches;
 using SPT.Custom.Utils;
 using SPT.SinglePlayer.Patches.MainMenu;
+using SPT.SinglePlayer.Patches.RaidFix;
 using SPT.SinglePlayer.Patches.ScavMode;
 using System;
 using System.Collections;
@@ -50,7 +52,7 @@ namespace Fika.Core
 	[BepInDependency("com.SPT.debugging", BepInDependency.DependencyFlags.HardDependency)] // This is used so that we guarantee to load after spt-debugging, that way we can disable its patches
 	public class FikaPlugin : BaseUnityPlugin
 	{
-		public const string FikaVersion = "1.0.3";
+		public const string FikaVersion = "1.0.6";
 		public static FikaPlugin Instance;
 		public static InternalBundleLoader BundleLoaderPlugin { get; private set; }
 		public static string EFTVersionMajor { get; internal set; }
@@ -66,8 +68,9 @@ namespace Fika.Core
 		public FikaModHandler ModHandler = new();
 		public string[] LocalIPs;
 		public IPAddress WanIP;
+		public bool LocalesLoaded;
 
-		private static readonly Version RequiredServerVersion = new("2.3.0");
+		private static readonly Version RequiredServerVersion = new("2.3.2");
 
 		public static DedicatedRaidWebSocketClient DedicatedRaidWebSocket { get; set; }
 
@@ -185,7 +188,6 @@ namespace Fika.Core
 		public static ConfigEntry<bool> NativeSockets { get; set; }
 		public static ConfigEntry<string> ForceIP { get; set; }
 		public static ConfigEntry<string> ForceBindIP { get; set; }
-		public static ConfigEntry<float> AutoRefreshRate { get; set; }
 		public static ConfigEntry<int> UDPPort { get; set; }
 		public static ConfigEntry<bool> UseUPnP { get; set; }
 		public static ConfigEntry<bool> UseNatPunching { get; set; }
@@ -209,6 +211,7 @@ namespace Fika.Core
 		public bool UseInertia;
 		public bool SharedQuestProgression;
 		public bool CanEditRaidSettings;
+		public bool EnableTransits;
 		#endregion
 
 		#region natpunch config
@@ -223,14 +226,13 @@ namespace Fika.Core
 			Instance = this;
 
 			GetNatPunchServerConfig();
-			SetupConfig();
 			EnableFikaPatches();
+			EnableTranspilers();
 			gameObject.AddComponent<MainThreadDispatcher>();
 
 // #if GOLDMASTER
             new TOS_Patch().Enable();
 // #endif
-			SetupConfigEventHandlers();
 
 			DisableSPTPatches();
 			FixSPTBugPatches();
@@ -279,7 +281,7 @@ namespace Fika.Core
 			new MatchmakerAcceptScreen_Show_Patch().Enable();
 			new Minefield_method_2_Patch().Enable();
 			new MineDirectional_OnTriggerEnter_Patch().Enable();
-			new BotCacher_Patch().Enable();
+			// new BotCacher_Patch().Enable();
 			new AbstractGame_InRaid_Patch().Enable();
 			new DisconnectButton_Patch().Enable();
 			new ChangeGameModeButton_Patch().Enable();
@@ -305,7 +307,8 @@ namespace Fika.Core
 			new TripwireSynchronizableObject_method_6_Patch().Enable();
 			new TripwireSynchronizableObject_method_11_Patch().Enable();
 			new BaseLocalGame_method_13_Patch().Enable();
-			new Player_method_144_Patch().Enable();
+			new Player_OnDead_Patch().Enable();
+			new Player_ManageAggressor_Patch().Enable();
 			new Player_SetDogtagInfo_Patch().Enable();
 			new WeaponManagerClass_ValidateScopeSmoothZoomUpdate_Patch().Enable();
 			new WeaponManagerClass_method_12_Patch().Enable();
@@ -339,12 +342,19 @@ namespace Fika.Core
 			new RaidSettingsWindow_Show_Patch().Enable();
 			new TransitControllerAbstractClass_Exist_Patch().Enable();
 			new BotReload_method_1_Patch().Enable();
-
+			new Class1374_ReloadBackendLocale_Patch().Enable();
+			new GClass2013_method_0_Patch().Enable();
 #if DEBUG
 			TasksExtensions_HandleFinishedTask_Patches.Enable();
 			new GClass1640_method_0_Patch().Enable();
 			new TestHalloweenPatch().Enable();
 #endif
+		}
+
+		private void EnableTranspilers()
+		{
+			new BotOwner_UpdateManual_Transpiler().Enable();
+			new CoverPointMaster_method_0_Transpiler().Enable();
 		}
 
 		private void VerifyServerVersion()
@@ -405,6 +415,7 @@ namespace Fika.Core
 			UseInertia = clientConfig.UseInertia;
 			SharedQuestProgression = clientConfig.SharedQuestProgression;
 			CanEditRaidSettings = clientConfig.CanEditRaidSettings;
+			EnableTransits = clientConfig.EnableTransits;
 
 			clientConfig.LogValues();
 		}
@@ -421,6 +432,44 @@ namespace Fika.Core
 			natPunchServerConfig.LogValues();
 		}
 
+		/// <summary>
+		/// This is required for the locales to be properly loaded, for some reason they are still unavailable for a few seconds after getting populated
+		/// </summary>
+		/// <param name="__result">The <see cref="Task"/> that populates the locales</param>
+		/// <returns></returns>
+		public IEnumerator WaitForLocales(Task __result)
+		{
+			Logger.LogInfo("Waiting for locales to be ready...");
+			while (!__result.IsCompleted)
+			{
+				yield return null;
+			}
+			while (LocaleUtils.BEPINEX_H_ADVANCED.Localized() == "F_BepInEx_H_Advanced")
+			{
+				yield return new WaitForSeconds(1);
+			}
+			LocalesLoaded = true;
+			Logger.LogInfo("Locales are ready!");
+			SetupConfig();
+			FikaVersionLabel_Patch.UpdateVersionLabel();
+		}
+
+		private string CleanConfigString(string header)
+		{
+			string original = string.Copy(header);
+			string[] forbiddenChars = ["\n", "\t", "\\", "\"", "'", "[", "]"];
+			foreach (string character in forbiddenChars)
+			{
+				if (header.Contains(character))
+				{
+					FikaLogger.LogWarning($"Header {original} contains an illegal character: {character}\nReport this to the developers!");
+					header.Replace(character, "");
+				}
+			}
+
+			return header;
+		}
+
 		private void SetupConfig()
         {
             // Hidden
@@ -430,244 +479,272 @@ namespace Fika.Core
 
             // Advanced
 
-            OfficialVersion = Config.Bind("进阶", "官方版本", false,
-                new ConfigDescription("显示官方版本而非 Fika 版本", tags: new ConfigurationManagerAttributes() { IsAdvanced = true }));
+			OfficialVersion = Config.Bind(CleanConfigString(LocaleUtils.BEPINEX_H_ADVANCED.Localized()), LocaleUtils.BEPINEX_OFFICIAL_VERSION_T.Localized(), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_OFFICIAL_VERSION_D.Localized(), tags: new ConfigurationManagerAttributes() { IsAdvanced = true }));
 
 			// Coop
 
-            ShowNotifications = Instance.Config.Bind("2.联机", "显示通知", true,
-                new ConfigDescription("启用自定义通知，当玩家死亡、提取、击杀boss等时显示", tags: new ConfigurationManagerAttributes() { Order = 7 }));
+			string coopHeader = CleanConfigString(LocaleUtils.BEPINEX_H_COOP.Localized());
 
-            AutoExtract = Config.Bind("联机", "自动撤离", false,
-                new ConfigDescription("在撤离倒计时结束后自动撤离。只在没有客户端连接时且作为主机时有效",
+			ShowNotifications = Instance.Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_SHOW_FEED_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_SHOW_FEED_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 7 }));
+
+			AutoExtract = Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_AUTO_EXTRACT_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_AUTO_EXTRACT_D.Localized(),
 				tags: new ConfigurationManagerAttributes() { Order = 6 }));
 
-            ShowExtractMessage = Config.Bind("联机", "显示 撤离信息", true,
-                new ConfigDescription("是否在死亡/撤离后显示消息", tags: new ConfigurationManagerAttributes() { Order = 5 }));
+			ShowExtractMessage = Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_SHOW_EXTRACT_MESSAGE_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_SHOW_EXTRACT_MESSAGE_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 5 }));
 
-            ExtractKey = Config.Bind("联机", "撤离 按键", new KeyboardShortcut(KeyCode.F8),
-                new ConfigDescription("用于从战局中撤离的按键", tags: new ConfigurationManagerAttributes() { Order = 4 }));
+			ExtractKey = Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_EXTRACT_KEY_T.Localized()), new KeyboardShortcut(KeyCode.F8),
+				new ConfigDescription(LocaleUtils.BEPINEX_EXTRACT_KEY_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 4 }));
 
-            EnableChat = Config.Bind("联机", "启用 聊天", false,
-                new ConfigDescription("切换以启用游戏内聊天。不能在战局中更改", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+			EnableChat = Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_ENABLE_CHAT_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_ENABLE_CHAT_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
-            ChatKey = Config.Bind("联机", "聊天 按键", new KeyboardShortcut(KeyCode.RightControl),
-                new ConfigDescription("打开聊天窗口的按键", tags: new ConfigurationManagerAttributes() { Order = 2 }));
+			ChatKey = Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_CHAT_KEY_T.Localized()), new KeyboardShortcut(KeyCode.RightControl),
+				new ConfigDescription(LocaleUtils.BEPINEX_CHAT_KEY_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 2 }));
 
-			EnableOnlinePlayers = Config.Bind("联机", "启用 在线玩家列表", true,
-				new ConfigDescription("是否在菜单显示在线玩家列表", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+			EnableOnlinePlayers = Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_ENABLE_ONLINE_PLAYER_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_ENABLE_ONLINE_PLAYER_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
-			OnlinePlayersScale = Config.Bind("联机", "在线玩家列表显示量", 1f,
-				new ConfigDescription("在线玩家列表窗口中显示多少个玩家. 只有当它看起来比例失调时才需要改变.\n\n需要刷新主菜单才能生效.",
+			OnlinePlayersScale = Config.Bind(coopHeader, CleanConfigString(LocaleUtils.BEPINEX_ONLINE_PLAYERS_SCALE_T.Localized()), 1f,
+				new ConfigDescription(LocaleUtils.BEPINEX_ONLINE_PLAYERS_SCALE_D.Localized(),
 				new AcceptableValueRange<float>(0.5f, 1.5f), new ConfigurationManagerAttributes() { Order = 0 }));
 
             // Coop | Name Plates
 
-            UseNamePlates = Config.Bind("联机 | 铭牌显示", "显示玩家 铭牌", false,
-                new ConfigDescription("是否显示 玩家名称&血条", tags: new ConfigurationManagerAttributes() { Order = 13 }));
+			string coopNameplatesHeader = CleanConfigString(LocaleUtils.BEPINEX_H_COOP_NAME_PLATES.Localized());
 
-            HideHealthBar = Config.Bind("联机 | 铭牌显示", "隐藏 血条", false,
-                new ConfigDescription("完全隐藏玩家血条", tags: new ConfigurationManagerAttributes() { Order = 12 }));
+			UseNamePlates = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_USE_NAME_PLATES_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_USE_NAME_PLATES_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 13 }));
 
-            UseHealthNumber = Config.Bind("联机 | 铭牌显示", "显示 血量百分比%", false,
-                new ConfigDescription("显示血量的百分比%而不是显示血条", tags: new ConfigurationManagerAttributes() { Order = 11 }));
+			HideHealthBar = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_HIDE_HEALTH_BAR_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_HIDE_HEALTH_BAR_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 12 }));
 
-            ShowEffects = Config.Bind("联机 | 铭牌显示", "显示 状态效果", true,
-                new ConfigDescription("开启后，会在玩家血条下方展示当前的状态效果", tags: new ConfigurationManagerAttributes() { Order = 10 }));
+			UseHealthNumber = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_USE_PERCENT_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_USE_PERCENT_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 11 }));
 
-            UsePlateFactionSide = Config.Bind("联机 | 铭牌显示", "显示 玩家阵营", true,
-                new ConfigDescription("开启后，会在玩家血条边上显示玩家的所属阵营", tags: new ConfigurationManagerAttributes() { Order = 9 }));
+			ShowEffects = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_SHOW_EFFECTS_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_SHOW_EFFECTS_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 10 }));
 
-            HideNamePlateInOptic = Config.Bind("联机 | 铭牌显示", "使用 瞄准镜 使隐藏铭牌", true,
-                new ConfigDescription("在通过 瞄准镜 查看时隐藏铭牌", tags: new ConfigurationManagerAttributes() { Order = 8 }));
+			UsePlateFactionSide = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_SHOW_FACTION_ICON_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_SHOW_FACTION_ICON_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 9 }));
 
-            NamePlateUseOpticZoom = Config.Bind("联机 | 铭牌显示", "铭牌使用 瞄准镜 缩放", true,
-                new ConfigDescription("是否在使用瞄准镜时缩放显示铭牌", tags: new ConfigurationManagerAttributes() { Order = 7, IsAdvanced = true }));
+			HideNamePlateInOptic = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_HIDE_IN_OPTIC_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_HIDE_IN_OPTIC_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 8 }));
 
-            DecreaseOpacityNotLookingAt = Config.Bind("联机 | 铭牌显示", "未注视时降低透明度", true,
-                new ConfigDescription("当未注视玩家时，降低铭牌的透明度", tags: new ConfigurationManagerAttributes() { Order = 6 }));
+			NamePlateUseOpticZoom = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_OPTIC_USE_ZOOM_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_OPTIC_USE_ZOOM_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 7, IsAdvanced = true }));
 
-            NamePlateScale = Config.Bind("联机 | 铭牌显示", "铭牌比例", 0.22f,
-                new ConfigDescription("铭牌的大小", new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 5 }));
+			DecreaseOpacityNotLookingAt = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_DEC_OPAC_PERI_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_DEC_OPAC_PERI_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 6 }));
 
-            OpacityInADS = Config.Bind("联机 | 铭牌显示", "瞄准时透明度", 0.75f,
-                new ConfigDescription("瞄准时铭牌的透明度", new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes() { Order = 4 }));
+			NamePlateScale = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_NAME_PLATE_SCALE_T.Localized()), 0.22f,
+				new ConfigDescription(LocaleUtils.BEPINEX_NAME_PLATE_SCALE_D.Localized(), new AcceptableValueRange<float>(0.05f, 1f), new ConfigurationManagerAttributes() { Order = 5 }));
 
-            MaxDistanceToShow = Config.Bind("联机 | 铭牌显示", "铭牌显示的最大距离", 500f,
-                new ConfigDescription("铭牌将变得不可见的最大距离，开始在输入值的一半处逐渐消失", new AcceptableValueRange<float>(10f, 1000f), new ConfigurationManagerAttributes() { Order = 3 }));
+			OpacityInADS = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_ADS_OPAC_T.Localized()), 0.75f,
+				new ConfigDescription(LocaleUtils.BEPINEX_ADS_OPAC_D.Localized(), new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes() { Order = 4 }));
 
-            MinimumOpacity = Config.Bind("联机 | 铭牌显示", "最小 铭牌透明度", 0.1f,
-                new ConfigDescription("铭牌的最小透明度", new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 2 }));
+			MaxDistanceToShow = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_MAX_DISTANCE_T.Localized()), 500f,
+				new ConfigDescription(LocaleUtils.BEPINEX_MAX_DISTANCE_D.Localized(), new AcceptableValueRange<float>(10f, 1000f), new ConfigurationManagerAttributes() { Order = 3 }));
 
-            MinimumNamePlateScale = Config.Bind("联机 | 铭牌显示", "最小 铭牌比例", 0.01f,
-                new ConfigDescription("铭牌的最小比例", new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 1 }));
+			MinimumOpacity = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_MIN_OPAC_T.Localized()), 0.1f,
+				new ConfigDescription(LocaleUtils.BEPINEX_MIN_OPAC_D.Localized(), new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 2 }));
 
-            UseOcclusion = Config.Bind("联机 | 铭牌显示", "使用遮挡", false,
-                new ConfigDescription("当玩家不在视线范围内时，使用遮挡来隐藏铭牌", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+			MinimumNamePlateScale = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_MIN_PLATE_SCALE_T.Localized()), 0.01f,
+				new ConfigDescription(LocaleUtils.BEPINEX_MIN_PLATE_SCALE_D.Localized(), new AcceptableValueRange<float>(0.0f, 1f), new ConfigurationManagerAttributes() { Order = 1 }));
+
+			UseOcclusion = Config.Bind(coopNameplatesHeader, CleanConfigString(LocaleUtils.BEPINEX_USE_OCCLUSION_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_USE_OCCLUSION_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
             // Coop | Quest Sharing
 
-            QuestTypesToShareAndReceive = Config.Bind("联机 | 任务共享", "任务类型", EQuestSharingTypes.All,
-                new ConfigDescription("选择能够共享的任务类型。\nKill - 击杀\nItem - 寻找物品\nLocation - 位置踩点\nPlaceBeacon - 放置标记：既包括标记也包括放置物品", tags: new ConfigurationManagerAttributes() { Order = 4 }));
+			string coopQuestSharingHeader = CleanConfigString(LocaleUtils.BEPINEX_H_COOP_QUEST_SHARING.Localized());
 
-            QuestSharingNotifications = Config.Bind("联机 | 任务共享", "显示通知", true,
-                new ConfigDescription("是否在任务进度共享时显示通知", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+			QuestTypesToShareAndReceive = Config.Bind(coopQuestSharingHeader, CleanConfigString(LocaleUtils.BEPINEX_QUEST_TYPES_T.Localized()), EQuestSharingTypes.All,
+				new ConfigDescription(LocaleUtils.BEPINEX_QUEST_TYPES_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 4 }));
 
-            EasyKillConditions = Config.Bind("联机 | 任务共享", "共享击杀进度", false,
-                new ConfigDescription("启用简化击杀条件。当启用时，每当友方玩家击杀敌人时，将被视为自己任务进度所杀。这可能是不一致的，也并不总是有效的", tags: new ConfigurationManagerAttributes() { Order = 2 }));
+			QuestSharingNotifications = Config.Bind(coopQuestSharingHeader, CleanConfigString(LocaleUtils.BEPINEX_QS_NOTIFICATIONS_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_QS_NOTIFICATIONS_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
-			SharedKillExperience = Config.Bind("联机 | 任务共享", "共享击杀经验", false,
-				new ConfigDescription("当队友击杀非BOSS敌人时你是否能获得其一半的击杀经验值", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+			EasyKillConditions = Config.Bind(coopQuestSharingHeader, CleanConfigString(LocaleUtils.BEPINEX_EASY_KILL_CONDITIONS_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_EASY_KILL_CONDITIONS_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 2 }));
 
-            SharedBossExperience = Config.Bind("联机 | 任务共享", "共享BOSS经验", false,
-				new ConfigDescription("当队友击杀BOSS时你是否能获得其一半的BOSS击杀经验值", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+			SharedKillExperience = Config.Bind(coopQuestSharingHeader, CleanConfigString(LocaleUtils.BEPINEX_SHARED_KILL_XP_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_SHARED_KILL_XP_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
-			// Coop | Pinginging
+			SharedBossExperience = Config.Bind(coopQuestSharingHeader, CleanConfigString(LocaleUtils.BEPINEX_SHARED_BOSS_XP_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_SHARED_BOSS_XP_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
-            UsePingSystem = Config.Bind("联机 | 标点", "启用标点标记", false,
-                new ConfigDescription("启用标点系统。开启后，您可以通过按下标点键来接收和发送标点", tags: new ConfigurationManagerAttributes() { Order = 11 }));
+			// Coop | Pinging
 
-            PingButton = Config.Bind("联机 | 标点", "标点 按键", new KeyboardShortcut(KeyCode.U),
-                new ConfigDescription("用于发送标点的按键", tags: new ConfigurationManagerAttributes() { Order = 10 }));
+			string coopPingingHeader = CleanConfigString(LocaleUtils.BEPINEX_H_COOP_PINGING.Localized());
 
-            PingColor = Config.Bind("联机 | 标点", "标点颜色", Color.white,
-                new ConfigDescription("标点在其他玩家屏幕上的颜色", tags: new ConfigurationManagerAttributes() { Order = 9 }));
+			UsePingSystem = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_SYSTEM_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_SYSTEM_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 11 }));
 
-            PingSize = Config.Bind("联机 | 标点", "标点大小", 1f,
-                new ConfigDescription("标点图标大小倍率", new AcceptableValueRange<float>(0.1f, 2f), new ConfigurationManagerAttributes() { Order = 8 }));
+			PingButton = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_BUTTON_T.Localized()), new KeyboardShortcut(KeyCode.Semicolon),
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_BUTTON_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 10 }));
 
-            PingTime = Config.Bind("联机 | 标点", "标点显示时间", 3,
-                new ConfigDescription("标点显示的时长", new AcceptableValueRange<int>(2, 10), new ConfigurationManagerAttributes() { Order = 7 }));
+			PingColor = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_COLOR_T.Localized()), Color.white,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_COLOR_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 9 }));
 
-            PlayPingAnimation = Config.Bind("联机 | 标点", "播放标点动画", false,
-                new ConfigDescription("当发送标点时自动播放指示动画。可能会影响游戏体验", tags: new ConfigurationManagerAttributes() { Order = 6 }));
+			PingSize = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_SIZE_T.Localized()), 1f,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_SIZE_D.Localized(), new AcceptableValueRange<float>(0.1f, 2f), new ConfigurationManagerAttributes() { Order = 8 }));
 
-            ShowPingDuringOptics = Config.Bind("联机 | 标点", "瞄准镜中显示标点", false,
-                new ConfigDescription("是否在瞄准镜视野中显示标点", tags: new ConfigurationManagerAttributes() { Order = 5 }));
+			PingTime = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_TIME_T.Localized()), 3,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_TIME_D.Localized(), new AcceptableValueRange<int>(2, 10), new ConfigurationManagerAttributes() { Order = 7 }));
 
-            PingUseOpticZoom = Config.Bind("联机 | 标点", "标点在瞄准镜时缩放", true,
-                new ConfigDescription("标点位置是否应使用瞄准镜时显示", tags: new ConfigurationManagerAttributes() { Order = 4, IsAdvanced = true }));
+			PlayPingAnimation = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_ANIMATION_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_ANIMATION_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 6 }));
 
-            PingScaleWithDistance = Config.Bind("联机 | 标点", "标点随距离缩放", true,
-                new ConfigDescription("标点大小是否应随距离从玩家缩放", tags: new ConfigurationManagerAttributes() { Order = 3, IsAdvanced = true }));
+			ShowPingDuringOptics = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_OPTICS_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_OPTICS_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 5 }));
 
-			PingMinimumOpacity = Config.Bind("联机 | 标点", "标点最小不透明度", 0.05f,
-				new ConfigDescription("直视标点时的最小不透明度.", new AcceptableValueRange<float>(0f, 0.5f), new ConfigurationManagerAttributes() { Order = 2, IsAdvanced = true }));
+			PingUseOpticZoom = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_OPTIC_ZOOM_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_OPTIC_ZOOM_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 4, IsAdvanced = true }));
 
-			ShowPingRange = Config.Bind("联机 | 标点", "显示标点范围", false,
-				new ConfigDescription("如果启用则显示从你到标点的范围.", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+			PingScaleWithDistance = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_SCALE_DISTANCE_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_SCALE_DISTANCE_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 3, IsAdvanced = true }));
 
-			PingSound = Config.Bind("联机 | 标点", "标点音效", EPingSound.SubQuestComplete,
-				new ConfigDescription("你指示标点时的音效", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+			PingMinimumOpacity = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_MIN_OPAC_T.Localized()), 0.05f,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_MIN_OPAC_D.Localized(), new AcceptableValueRange<float>(0f, 0.5f), new ConfigurationManagerAttributes() { Order = 2, IsAdvanced = true }));
+
+			ShowPingRange = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_RANGE_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_RANGE_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 1 }));
+
+			PingSound = Config.Bind(coopPingingHeader, CleanConfigString(LocaleUtils.BEPINEX_PING_SOUND_T.Localized()), EPingSound.SubQuestComplete,
+				new ConfigDescription(LocaleUtils.BEPINEX_PING_SOUND_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
             // Coop | Debug
 
-            FreeCamButton = Config.Bind("联机 | 调试Debug", "自由视角 按键", new KeyboardShortcut(KeyCode.F9),
-                "用于切换自由视角的按键");
+			string coopDebugHeader = CleanConfigString(LocaleUtils.BEPINEX_H_COOP_DEBUG.Localized());
 
-			AllowSpectateBots = Config.Bind("联机 | 调试Debug", "允许观战机器人", true,
-				"当所有玩家阵亡/撤离之后是否允许观战机器人视角");
+			FreeCamButton = Config.Bind(coopDebugHeader, CleanConfigString(LocaleUtils.BEPINEX_FREE_CAM_BUTTON_T.Localized()), new KeyboardShortcut(KeyCode.F9),
+				CleanConfigString(LocaleUtils.BEPINEX_FREE_CAM_BUTTON_D.Localized()));
 
-            AZERTYMode = Config.Bind("联机 | 调试Debug", "AZERTY模式(法式键位)", false,
-                "如果自由视角应该使用AZERTY键盘布局进行输入");
+			AllowSpectateBots = Config.Bind(coopDebugHeader, CleanConfigString(LocaleUtils.BEPINEX_SPECTATE_BOTS_T.Localized()), true,
+				CleanConfigString(LocaleUtils.BEPINEX_SPECTATE_BOTS_D.Localized()));
 
-			DroneMode = Config.Bind("联机 | 调试Debug", "无人机模式", false,
-				"自由视角摄像机是否像无人机一样只能垂直移动");
+			AZERTYMode = Config.Bind(coopDebugHeader, CleanConfigString(LocaleUtils.BEPINEX_AZERTY_MODE_T.Localized()), false,
+				CleanConfigString(LocaleUtils.BEPINEX_AZERTY_MODE_D.Localized()));
 
-            KeybindOverlay = Config.Bind("联机 | 调试Debug", "按键绑定叠加", true,
-                "是否显示包含所有自由视角按键绑定的叠加层");
+			DroneMode = Config.Bind(coopDebugHeader,	CleanConfigString(LocaleUtils.BEPINEX_DRONE_MODE_T.Localized()), false,
+				LocaleUtils.BEPINEX_DRONE_MODE_D.Localized());
+
+			KeybindOverlay = Config.Bind(coopDebugHeader, CleanConfigString(LocaleUtils.BEPINEX_KEYBIND_OVERLAY_T.Localized()), true,
+				LocaleUtils.BEPINEX_KEYBIND_OVERLAY_T.Localized());
 
             // Performance
 
-            DynamicAI = Config.Bind("性能", "动态AI", false,
-                new ConfigDescription("使用动态AI系统，在AI位于任何玩家范围之外时禁用AI", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+			string performanceHeader = CleanConfigString(LocaleUtils.BEPINEX_H_PERFORMANCE.Localized());
 
-            DynamicAIRange = Config.Bind("性能", "动态AI 范围", 100f,
-                new ConfigDescription("动态禁用AI的范围", new AcceptableValueRange<float>(150f, 1000f), new ConfigurationManagerAttributes() { Order = 2 }));
+			DynamicAI = Config.Bind(performanceHeader, CleanConfigString(LocaleUtils.BEPINEX_DYNAMIC_AI_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_DYNAMIC_AI_T.Localized(), tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
-            DynamicAIRate = Config.Bind("性能", "动态AI 扫描频率", EDynamicAIRates.Medium,
-                new ConfigDescription("动态AI扫描所有玩家范围的频率", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+			DynamicAIRange = Config.Bind(performanceHeader, CleanConfigString(LocaleUtils.BEPINEX_DYNAMIC_AI_RANGE_T.Localized()), 100f,
+				new ConfigDescription(LocaleUtils.BEPINEX_DYNAMIC_AI_RANGE_D.Localized(), new AcceptableValueRange<float>(150f, 1000f), new ConfigurationManagerAttributes() { Order = 2 }));
 
-            DynamicAIIgnoreSnipers = Config.Bind("性能", "动态AI - 忽略狙击手", true,
-                new ConfigDescription("是否动态AI应该忽略狙击手", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+			DynamicAIRate = Config.Bind(performanceHeader, CleanConfigString(LocaleUtils.BEPINEX_DYNAMIC_AI_RATE_T.Localized()), EDynamicAIRates.Medium,
+				new ConfigDescription(LocaleUtils.BEPINEX_DYNAMIC_AI_RATE_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
+			DynamicAIIgnoreSnipers = Config.Bind(performanceHeader, CleanConfigString(LocaleUtils.BEPINEX_DYNAMIC_AI_NO_SNIPERS_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_DYNAMIC_AI_NO_SNIPERS_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
             // Performance | Max Bots
 
-            EnforcedSpawnLimits = Config.Bind("性能 | AI上限", "强制生成限制", false,
-                new ConfigDescription("当生成AI时，强制执行生成限制，确保不超过原版限制。主要在使用生成模组或修改AI限制的情况下生效。不会阻止特殊AI的生成，例如Boss", tags: new ConfigurationManagerAttributes() { Order = 14 }));
+			string performanceBotsHeader = CleanConfigString(LocaleUtils.BEPINEX_H_PERFORMANCE_BOTS.Localized());
 
-            DespawnFurthest = Config.Bind("性能 | AI上限", "优先消失最远的AI", false,
-                new ConfigDescription("在强制生成限制时，是否让最远的AI消失，而不是阻止生成。这将使低最大AI数量的战局更活跃。对性能较差的PC有帮助。\n不过，如果没有动态生成模组，这可能会迅速耗尽地图上的生成点，使战局变得十分冷清", tags: new ConfigurationManagerAttributes() { Order = 13 }));
+			EnforcedSpawnLimits = Config.Bind(performanceBotsHeader, CleanConfigString(LocaleUtils.BEPINEX_ENFORCED_SPAWN_LIMITS_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_ENFORCED_SPAWN_LIMITS_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 14 }));
 
-            DespawnMinimumDistance = Config.Bind("性能 | AI上限", "最小消失距离", 200.0f,
-                new ConfigDescription("在此距离内AI不会消失", new AcceptableValueRange<float>(50f, 3000f), new ConfigurationManagerAttributes() { Order = 12 }));
+			DespawnFurthest = Config.Bind(performanceBotsHeader, CleanConfigString(LocaleUtils.BEPINEX_DESPAWN_FURTHEST_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_DESPAWN_FURTHEST_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 13 }));
 
-            MaxBotsFactory = Config.Bind("性能 | AI上限", "AI上限 - 工厂", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 11 }));
+			DespawnMinimumDistance = Config.Bind(performanceBotsHeader, CleanConfigString(LocaleUtils.BEPINEX_DESPAWN_MIN_DISTANCE_T.Localized()), 200.0f,
+				new ConfigDescription(LocaleUtils.BEPINEX_DESPAWN_MIN_DISTANCE_D.Localized(), new AcceptableValueRange<float>(50f, 3000f), new ConfigurationManagerAttributes() { Order = 12 }));
 
-            MaxBotsCustoms = Config.Bind("性能 | AI上限", "AI上限 - 海关", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 10 }));
+			string maxBotsHeader = CleanConfigString(LocaleUtils.BEPINEX_MAX_BOTS_T.Localized());
+			string maxBotsDescription = LocaleUtils.BEPINEX_MAX_BOTS_D.Localized();
 
-            MaxBotsInterchange = Config.Bind("性能 | AI上限", "AI上限 - 立交桥", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 8 }));
+			string factory = "factory4_day".Localized();
+			MaxBotsFactory = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, factory), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, factory), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 11 }));
 
-            MaxBotsReserve = Config.Bind("性能 | AI上限", "AI上限 - 储备站", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 7 }));
+			string customs = "bigmap".Localized();
+			MaxBotsCustoms = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, customs), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, customs), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 10 }));
 
-            MaxBotsWoods = Config.Bind("性能 | AI上限", "AI上限 - 森林", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 6 }));
+			string interchange = "interchange".Localized();
+			MaxBotsInterchange = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, interchange), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, interchange), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 8 }));
 
-            MaxBotsShoreline = Config.Bind("性能 | AI上限", "AI上限 - 海岸线", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 5 }));
+			string reserve = "rezervbase".Localized();
+			MaxBotsReserve = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, reserve), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, reserve), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 7 }));
 
-            MaxBotsStreets = Config.Bind("性能 | AI上限", "AI上限 - 塔科夫街区", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 4 }));
+			string woods = "woods".Localized();
+			MaxBotsWoods = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, woods), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, woods), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 6 }));
 
-            MaxBotsGroundZero = Config.Bind("性能 | AI上限", "AI上限 - 市中心", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 3 }));
+			string shoreline = "shoreline".Localized();
+			MaxBotsShoreline = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, shoreline), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, shoreline), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 5 }));
 
-            MaxBotsLabs = Config.Bind("性能 | AI上限", "AI上限 - 实验室", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 2 }));
+			string streets = "tarkovstreets".Localized();
+			MaxBotsStreets = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, streets), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, streets), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 4 }));
 
-            MaxBotsLighthouse = Config.Bind("性能 | AI上限", "AI上限 - 灯塔", 0,
-                new ConfigDescription("可以同时存在的最大AI数量。如果你的PC性能较差，这个设置很有用。设置为0则使用原版限制。在战局中不能更改", new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 1 }));
+			string groundZero = "sandbox".Localized();
+			MaxBotsGroundZero = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, groundZero), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, groundZero), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 3 }));
+
+			string labs = "laboratory".Localized();
+			MaxBotsLabs = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, labs), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, labs), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 2 }));
+
+			string lighthouse = "lighthouse".Localized();
+			MaxBotsLighthouse = Config.Bind(performanceBotsHeader, string.Format(maxBotsHeader, lighthouse), 0,
+				new ConfigDescription(string.Format(maxBotsDescription, lighthouse), new AcceptableValueRange<int>(0, 50), new ConfigurationManagerAttributes() { Order = 1 }));
 
             // Network
 
-            NativeSockets = Config.Bind(section: "网络", "本地套接字(Native Sockets)", false,
-                new ConfigDescription("使用本地套接字进行游戏流量传输。这使用直接的套接字调用进行发送/接收，以显著提高速度并减少GC压力。仅适用于Windows。Linux可能无效", tags: new ConfigurationManagerAttributes() { Order = 9 }));
+			string networkHeader = CleanConfigString(LocaleUtils.BEPINEX_H_NETWORK.Localized());
 
-            ForceIP = Config.Bind("网络", "强制IP(Force IP)", "",
-                new ConfigDescription("当托管时，强制服务器使用此IP进行广播，而不是自动尝试获取IP。留空以禁用\n若使用radmin等虚拟局域网联机工具，请填写自己联机所使用的IP", tags: new ConfigurationManagerAttributes() { Order = 8 }));
+			NativeSockets = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_NATIVE_SOCKETS_T.Localized()), true,
+				new ConfigDescription(LocaleUtils.BEPINEX_NATIVE_SOCKETS_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 9 }));
 
-            ForceBindIP = Config.Bind("网络", "强制绑定IP(Force Bind IP)", "0.0.0.0",
-                new ConfigDescription("当托管时，强制服务器使用此本地IP启动服务器。如果您在VPN上托管，这非常有用\n若使用radmin等虚拟局域网联机工具，请填写自己联机所使用的IP", new AcceptableValueList<string>(GetLocalAddresses()), new ConfigurationManagerAttributes() { Order = 7 }));
+			ForceIP = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_FORCE_IP_T.Localized()), "",
+				new ConfigDescription(LocaleUtils.BEPINEX_FORCE_IP_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 8 }));
 
-            AutoRefreshRate = Config.Bind("网络", "刷新服务器房间频率", 10f,
-                new ConfigDescription("客户端在地图准备大厅屏幕上每X秒将向服务器请求刷新当前房间列表", new AcceptableValueRange<float>(3f, 60f), new ConfigurationManagerAttributes() { Order = 6 }));
+			ForceBindIP = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_FORCE_BIND_IP_T.Localized()), "0.0.0.0",
+				new ConfigDescription(LocaleUtils.BEPINEX_FORCE_BIND_IP_D.Localized(), new AcceptableValueList<string>(GetLocalAddresses()), new ConfigurationManagerAttributes() { Order = 7 }));
 
-            UDPPort = Config.Bind("网络", "UDP 端口", 25565,
-                new ConfigDescription("用于UDP游戏数据包的端口", tags: new ConfigurationManagerAttributes() { Order = 5 }));
+			UDPPort = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_UDP_PORT_T.Localized()), 25565,
+				new ConfigDescription(LocaleUtils.BEPINEX_UDP_PORT_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 5 }));
 
-            UseUPnP = Config.Bind("网络", "使用 UPnP", false,
-                new ConfigDescription("尝试使用UPnP打开端口。如果您无法自己打开端口，但路由器支持UPnP，这将很有用", tags: new ConfigurationManagerAttributes() { Order = 4 }));
+			UseUPnP = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_USE_UPNP_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_USE_UPNP_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 4 }));
 
-            UseNatPunching = Config.Bind("网络", "使用 NAT 打孔", false,
-                new ConfigDescription("在托管战局时使用NAT打孔。仅适用于全锥形NAT类型的路由器，并且需要在SPT服务器上运行NatPunchServer。启用此模式时，UPnP、强制IP和强制绑定IP将被禁用", tags: new ConfigurationManagerAttributes() { Order = 3 }));
+			UseNatPunching = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_USE_NAT_PUNCH_T.Localized()), false,
+				new ConfigDescription(LocaleUtils.BEPINEX_USE_NAT_PUNCH_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 3 }));
 
-            ConnectionTimeout = Config.Bind("网络", "连接超时", 15,
-                new ConfigDescription("如果未收到数据包，则连接被视为丢失的时间", new AcceptableValueRange<int>(5, 60), new ConfigurationManagerAttributes() { Order = 2 }));
+			ConnectionTimeout = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_CONNECTION_TIMEOUT_T.Localized()), 15,
+				new ConfigDescription(LocaleUtils.BEPINEX_CONNECTION_TIMEOUT_D.Localized(), new AcceptableValueRange<int>(5, 60), new ConfigurationManagerAttributes() { Order = 2 }));
 
-			SendRate = Config.Bind("网络", "发送率", ESendRate.Medium,
-				new ConfigDescription("每秒移动数据包应该发送多少次（越低=使用的带宽越少，在插值期间稍微延迟）\n这只影响主机，并将同步到所有客户端。\n每秒的数量：\n\nVery Low = 10\nLow = 15\nMedium = 20\nHigh = 30\n\n建议保持不高于Medium，因为之后的收益微不足道。", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+			SendRate = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_SEND_RATE_T.Localized()), ESendRate.Medium,
+				new ConfigDescription(LocaleUtils.BEPINEX_SEND_RATE_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 1 }));
 
-			SmoothingRate = Config.Bind("网络", "平滑率", ESmoothingRate.Medium,
-				new ConfigDescription("本地模拟落后于发送速率*平滑速率。这保证了我们在缓冲区中总是有足够的快照来缓解插值期间的延迟和抖动。\n\nLow = 1.5\nMedium = 2\nHigh = 2.5\n\n如果移动不顺畅，将此设置为“High”。不能在战局中更改。", tags: new ConfigurationManagerAttributes() { Order = 0 }));
+			SmoothingRate = Config.Bind(networkHeader, CleanConfigString(LocaleUtils.BEPINEX_SMOOTHING_RATE_T.Localized()), ESmoothingRate.Medium,
+				new ConfigDescription(LocaleUtils.BEPINEX_SMOOTHING_RATE_D.Localized(), tags: new ConfigurationManagerAttributes() { Order = 0 }));
 
 			// Gameplay
-			DisableBotMetabolism = Config.Bind("游戏玩法", "禁用AI新陈代谢", false,
-                new ConfigDescription("禁用AI的新陈代谢，防止它们在过长时间的战局中因能量/水分丧失而死亡", tags: new ConfigurationManagerAttributes() { Order = 1 }));
+			DisableBotMetabolism = Config.Bind(CleanConfigString(LocaleUtils.BEPINEX_H_GAMEPLAY.Localized()), CleanConfigString(LocaleUtils.BEPINEX_DISABLE_BOT_METABOLISM_T.Localized()),
+				false, new ConfigDescription(LocaleUtils.BEPINEX_DISABLE_BOT_METABOLISM_D.Localized(),
+				tags: new ConfigurationManagerAttributes() { Order = 1 }));
+
+			SetupConfigEventHandlers();
 		}
 
 		private void OfficialVersion_SettingChanged(object sender, EventArgs e)
@@ -725,6 +802,7 @@ namespace Fika.Core
 			new GetProfileAtEndOfRaidPatch().Disable();
 			new ScavExfilPatch().Disable();
 			new SendPlayerScavProfileToServerAfterRaidPatch().Disable();
+			new BotOwnerManualUpdatePatch().Disable();
 		}
 
 		public void FixSPTBugPatches()

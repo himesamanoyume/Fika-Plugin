@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using Fika.Core.Utils;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using static Fika.Core.UI.FikaUIGlobals;
@@ -17,15 +18,15 @@ public class MainMenuUIPlayer : MonoBehaviour
 	public void SetActivity(string nickname, int level, EFikaPlayerPresence presence)
 	{
 		PlayerName.text = nickname;
-		PlayerLevel.text = $"({level})";
+		PlayerLevel.text = $"({level}级)";
 		string status = presence switch
 		{
-			EFikaPlayerPresence.IN_MENU => "主界面",
-			EFikaPlayerPresence.IN_RAID => "战局中",
-			EFikaPlayerPresence.IN_STASH => "仓库",
-			EFikaPlayerPresence.IN_HIDEOUT => "藏身处",
-			EFikaPlayerPresence.IN_FLEA => "跳蚤市场",
-			_ => "主界面",
+			EFikaPlayerPresence.IN_MENU => LocaleUtils.UI_MMUI_IN_MENU.Localized(),
+			EFikaPlayerPresence.IN_RAID => LocaleUtils.UI_MMUI_IN_RAID.Localized(),
+			EFikaPlayerPresence.IN_STASH => LocaleUtils.UI_MMUI_IN_STASH.Localized(),
+			EFikaPlayerPresence.IN_HIDEOUT => LocaleUtils.UI_MMUI_IN_HIDEOUT.Localized(),
+			EFikaPlayerPresence.IN_FLEA => LocaleUtils.UI_MMUI_IN_FLEA.Localized(),
+			_ => LocaleUtils.UI_MMUI_IN_MENU.Localized(),
 		};
 		PlayerStatus.text = status;
 		SetImageColor(presence);

@@ -1,8 +1,10 @@
 ﻿using Comfort.Common;
+using EFT;
 using EFT.UI;
 using Fika.Core.Bundles;
 using Fika.Core.Networking.Http;
 using Fika.Core.Networking.Models.Presence;
+using Fika.Core.Utils;
 using JsonType;
 using System;
 using System.Collections;
@@ -41,18 +43,46 @@ namespace Fika.Core.UI.Custom
 		private DateTime lastSet;
 		private int minSecondsToWait;
 		private RectTransform transformToScale;
+		private GInterface186<RaidSettings> backendSession;
 
-		private void Start()
+		private DateTime BackendTime
+		{
+			get
+			{
+				if (backendSession == null)
+				{
+					return DateTime.MinValue;
+				}
+				return backendSession.GetCurrentLocationTime;
+			}
+		}
+
+		private DateTime StaticTime
+		{
+			get
+			{
+				return new DateTime(2016, 8, 4, 15, 28, 0);
+			}
+		}
+
+		protected void Start()
 		{
 			instance = this;
 			minSecondsToWait = 2;
 			players = [];
 			lastRefresh = DateTime.Now;
 			lastSet = DateTime.Now;
+			if (TarkovApplication.Exist(out TarkovApplication tarkovApplication))
+			{
+				if (tarkovApplication.Session != null)
+				{
+					backendSession = tarkovApplication.Session;
+				}
+			}
 			CreateMainMenuUI();
 		}
 
-		private void OnEnable()
+		protected void OnEnable()
 		{
 			if (!FikaPlugin.EnableOnlinePlayers.Value)
 			{
@@ -76,7 +106,7 @@ namespace Fika.Core.UI.Custom
 			queryRoutine = StartCoroutine(QueryPlayers());
 		}
 
-		private void OnDisable()
+		protected void OnDisable()
 		{
 			if (queryRoutine != null)
 			{
@@ -141,6 +171,27 @@ namespace Fika.Core.UI.Custom
 			SetupPlayers(ref response);
 		}
 
+		private string ConvertToTime(EDateTime dateTime, bool staticTime)
+		{
+			if (staticTime)
+			{
+				DateTime staticDate = StaticTime;
+				return dateTime == EDateTime.CURR ? staticDate.ToString("HH:mm:ss") : staticDate.AddHours(-12).ToString("HH:mm:ss");
+			}
+
+			DateTime backendTime = BackendTime;
+			if (backendTime == DateTime.MinValue)
+			{
+				return "ERROR";
+			}
+			return dateTime == EDateTime.CURR ? backendTime.ToString("HH:mm:ss") : backendTime.AddHours(-12).ToString("HH:mm:ss");
+		}
+
+		private bool IsStaticTimeLocation(string location)
+		{
+			return location is "factory4_day" or "factory4_night" or "laboratory";
+		}
+
 		private void SetupPlayers(ref FikaPlayerPresence[] responses)
 		{
 			foreach (FikaPlayerPresence presence in responses)
@@ -151,11 +202,13 @@ namespace Fika.Core.UI.Custom
 				if (presence.Activity is EFikaPlayerPresence.IN_RAID && presence.RaidInformation.HasValue)
 				{
 					RaidInformation information = presence.RaidInformation.Value;
-					string side = information.Side == EFT.ESideType.Pmc ? "PMC" : "Scav";
-					string time = information.Time is EDateTime.CURR ? "左" : "右";
+					string side = information.Side == ESideType.Pmc ? "RaidSidePmc".Localized() : "RaidSideScav".Localized();
+					string time = ConvertToTime(information.Time, IsStaticTimeLocation(information.Location));
 					HoverTooltipArea tooltip = newPlayer.AddComponent<HoverTooltipArea>();
 					tooltip.enabled = true;
-					tooltip.SetMessageText($"正作为 {side} 阵营在 {ColorizeText(EColor.BLUE, information.Location.Localized())} 中\n时间段: {time}侧");
+					tooltip.SetMessageText(string.Format(LocaleUtils.UI_MMUI_RAID_DETAILS.Localized(), side,
+						ColorizeText(EColor.BLUE, information.Location.Localized()),
+						BoldText(time)));
 				}
 				newPlayer.SetActive(true);
 				players.Add(newPlayer);

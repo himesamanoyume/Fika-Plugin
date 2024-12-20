@@ -7,6 +7,7 @@ using EFT.Ballistics;
 using EFT.Interactive;
 using EFT.InventoryLogic;
 using EFT.Vaulting;
+using Fika.Core.Coop.Components;
 using Fika.Core.Coop.Custom;
 using Fika.Core.Coop.Factories;
 using Fika.Core.Coop.GameMode;
@@ -162,7 +163,10 @@ namespace Fika.Core.Coop.Players
 			observedTraverse.Field<GClass886>("gclass886_0").Value = new();
 			player.cullingHandler = observedTraverse.Field<GClass886>("gclass886_0").Value;
 			player.cullingHandler.Initialize(player, player.PlayerBones);
-			player.cullingHandler.Disable();
+			if (FikaBackendUtils.IsDedicated || profile.IsPlayerProfile())
+			{
+				player.cullingHandler.Disable(); 
+			}
 
 			if (!aiControl)
 			{
@@ -791,7 +795,16 @@ namespace Fika.Core.Coop.Players
 			{
 				SetInventory(CorpseSyncPacket.InventoryDescriptor);
 			}
-			return CreateCorpse<Corpse>(CorpseSyncPacket.OverallVelocity);
+			if (FikaBackendUtils.IsClient)
+			{
+				ObservedCorpse observedCorpse = CreateCorpse<ObservedCorpse>(CorpseSyncPacket.OverallVelocity);
+				Singleton<GameWorld>.Instance.ObservedPlayersCorpses.Add(observedCorpse.GetNetId(), observedCorpse);
+				return observedCorpse; 
+			}
+
+			Corpse corpse = CreateCorpse<Corpse>(CorpseSyncPacket.OverallVelocity);
+			CorpsePositionSyncer.Create(corpse.gameObject, corpse);
+			return corpse;
 		}
 
 		public override void OnDead(EDamageType damageType)
@@ -901,30 +914,44 @@ namespace Fika.Core.Coop.Players
 			LastDamagedBodyPart = packet.BodyPartType;
 		}
 
-		public override void OnBeenKilledByAggressor(IPlayer aggressor, DamageInfoStruct DamageInfo, EBodyPart bodyPart, EDamageType lethalDamageType)
+		public override void OnBeenKilledByAggressor(IPlayer aggressor, DamageInfoStruct damageInfo, EBodyPart bodyPart, EDamageType lethalDamageType)
 		{
 			// Only handle if it was ourselves as otherwise it's irrelevant
 			if (LastAggressor.IsYourPlayer)
 			{
-				base.OnBeenKilledByAggressor(aggressor, DamageInfo, bodyPart, lethalDamageType);
+				base.OnBeenKilledByAggressor(aggressor, damageInfo, bodyPart, lethalDamageType);
 				return;
 			}
 
-			if (FikaPlugin.Instance.SharedQuestProgression && FikaPlugin.EasyKillConditions.Value)
+			if (aggressor.GroupId == "Fika" && !aggressor.IsYourPlayer)
 			{
-				if (aggressor.GroupId == "Fika" && !aggressor.IsYourPlayer)
+				CoopPlayer mainPlayer = (CoopPlayer)Singleton<GameWorld>.Instance.MainPlayer;
+				if (mainPlayer == null)
+				{
+					return;
+				}
+
+				if (!mainPlayer.HealthController.IsAlive)
+				{
+					return;
+				}
+
+				WildSpawnType role = Profile.Info.Settings.Role;
+				bool countAsBoss = role.CountAsBossForStatistics() && !(role is WildSpawnType.pmcUSEC or WildSpawnType.pmcBEAR);
+				int experience = Profile.Info.Settings.Experience;
+				SessionCountersClass sessionCounters = mainPlayer.Profile.EftStats.SessionCounters;
+				HandleSharedExperience(countAsBoss, experience, sessionCounters);
+
+				if (FikaPlugin.Instance.SharedQuestProgression && FikaPlugin.EasyKillConditions.Value)
 				{
 #if DEBUG
-					FikaPlugin.Instance.FikaLogger.LogInfo("Handling teammate kill from teammate: " + aggressor.Profile.Nickname);
+				FikaPlugin.Instance.FikaLogger.LogInfo($"Received shared kill XP of {toReceive} from {aggressor.Profile.Nickname}");
 #endif
-					CoopPlayer mainPlayer = (CoopPlayer)Singleton<GameWorld>.Instance.MainPlayer;
-					if (mainPlayer != null)
-					{
-						float distance = Vector3.Distance(aggressor.Position, Position);
-						mainPlayer.HandleTeammateKill(ref DamageInfo, bodyPart, Side, Profile.Info.Settings.Role, ProfileId,
-							distance, Inventory.EquippedInSlotsTemplateIds, HealthController.BodyPartEffects, TriggerZones,
-							(CoopPlayer)aggressor, Profile.Info.Settings.Experience);
-					}
+
+					float distance = Vector3.Distance(aggressor.Position, Position);
+					mainPlayer.HandleTeammateKill(ref damageInfo, bodyPart, Side, role, ProfileId,
+						distance, Inventory.EquippedInSlotsTemplateIds, HealthController.BodyPartEffects, TriggerZones,
+						(CoopPlayer)aggressor);
 				}
 			}
 		}
@@ -1359,7 +1386,7 @@ namespace Fika.Core.Coop.Players
 					CreateFirearmController(itemId, isStationary, true);
 					break;
 				case EHandsControllerType.Meds:
-					CreateMedsController(itemId, EBodyPart.Head, 1f, 1);
+					CreateMedsController(itemId, EBodyPart.Head, 0f, 1);
 					break;
 				case EHandsControllerType.Grenade:
 					CreateGrenadeController(itemId);
@@ -1553,25 +1580,6 @@ namespace Fika.Core.Coop.Players
 			{
 				FindKillerWeapon();
 			}
-		}
-
-		private void FindKillerWeapon()
-		{
-			GStruct448<Item> itemResult = FindItemById(lastWeaponId, false, false);
-			if (!itemResult.Succeeded)
-			{
-				foreach (ThrowWeapItemClass grenadeClass in Singleton<IFikaNetworkManager>.Instance.CoopHandler.LocalGameInstance.ThrownGrenades)
-				{
-					if (grenadeClass.Id == lastWeaponId)
-					{
-						LastDamageInfo.Weapon = grenadeClass;
-						break;
-					}
-				}
-				return;
-			}
-
-			LastDamageInfo.Weapon = itemResult.Value;
 		}
 
 		private class RemoveHandsControllerHandler(ObservedCoopPlayer coopPlayer, Callback callback)

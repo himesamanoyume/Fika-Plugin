@@ -48,8 +48,9 @@ namespace Fika.Core.Networking
 	{
 		public int ReadyClients = 0;
 		public DateTime TimeSinceLastPeerDisconnected = DateTime.Now.AddDays(1);
-		public bool HasHadPeer = false;
-		public bool RaidInitialized = false;
+		public bool HasHadPeer;
+		public bool RaidInitialized;
+		public bool RaidStarted;
 		public FikaHostWorld FikaHostWorld { get; set; }
 		public bool Started
 		{
@@ -188,6 +189,7 @@ namespace Fika.Core.Networking
 			packetProcessor.SubscribeNetSerializable<PingPacket, NetPeer>(OnPingPacketReceived);
 			packetProcessor.SubscribeNetSerializable<LootSyncPacket, NetPeer>(OnLootSyncPacketReceived);
 			packetProcessor.SubscribeNetSerializable<LoadingProfilePacket, NetPeer>(OnLoadingProfilePacketReceived);
+			packetProcessor.SubscribeNetSerializable<SideEffectPacket, NetPeer>(OnSideEffectPacketReceived);
 
 #if DEBUG
 			AddDebugPackets();
@@ -295,6 +297,39 @@ namespace Fika.Core.Networking
 			FikaEventDispatcher.DispatchEvent(new FikaNetworkManagerCreatedEvent(this));
 		}
 
+		private void OnSideEffectPacketReceived(SideEffectPacket packet, NetPeer peer)
+		{
+#if DEBUG
+			logger.LogWarning("OnSideEffectPacketReceived: Received"); 
+#endif
+			SendDataToAll(ref packet, DeliveryMethod.ReliableOrdered, peer);
+
+			GameWorld gameWorld = Singleton<GameWorld>.Instance;
+			if (gameWorld == null)
+			{
+				logger.LogError("OnSideEffectPacketReceived: GameWorld was null!");
+				return;
+			}
+
+			GStruct448<Item> gstruct2 = gameWorld.FindItemById(packet.ItemId);
+			if (gstruct2.Failed)
+			{
+				logger.LogError("OnSideEffectPacketReceived: " + gstruct2.Error);
+				return;
+			}
+			Item item = gstruct2.Value;
+			if (item.TryGetItemComponent(out SideEffectComponent sideEffectComponent))
+			{
+#if DEBUG
+				logger.LogInfo("Setting value to: " + packet.Value + ", original: " + sideEffectComponent.Value); 
+#endif
+				sideEffectComponent.Value = packet.Value;
+				item.RaiseRefreshEvent(false, false);
+				return;
+			}
+			logger.LogError("OnSideEffectPacketReceived: SideEffectComponent was not found!");
+		}
+
 		private void OnLoadingProfilePacketReceived(LoadingProfilePacket packet, NetPeer peer)
 		{
 			if (packet.Profiles == null)
@@ -304,7 +339,7 @@ namespace Fika.Core.Networking
 			}
 
 			KeyValuePair<Profile, bool> kvp = packet.Profiles.First();
-			visualProfiles.Add(kvp.Key, kvp.Value);
+			visualProfiles.Add(kvp.Key, visualProfiles.Count == 0 || kvp.Value);
 			FikaBackendUtils.AddPartyMembers(visualProfiles);
 			packet.Profiles = visualProfiles;
 			SendDataToAll(ref packet, DeliveryMethod.ReliableOrdered);
@@ -985,17 +1020,22 @@ namespace Fika.Core.Networking
 		{
 			ReadyClients += packet.ReadyPlayers;
 
-			bool hostReady = coopHandler != null && coopHandler.LocalGameInstance != null && coopHandler.LocalGameInstance.Status == GameStatus.Started;
+			bool gameExists = coopHandler != null && coopHandler.LocalGameInstance != null;	
 
-			InformationPacket respondPackage = new(false)
+			InformationPacket respondPackage = new()
 			{
-				NumberOfPlayers = netServer.ConnectedPeersCount,
+				RaidStarted = gameExists && coopHandler.LocalGameInstance.RaidStarted,
 				ReadyPlayers = ReadyClients,
-				HostReady = hostReady,
+				HostReady = RaidStarted,
 				HostLoaded = RaidInitialized
 			};
 
-			if (hostReady)
+			if (gameExists && packet.RequestStart)
+			{
+				coopHandler.LocalGameInstance.RaidStarted = true;
+			}
+
+			if (RaidStarted)
 			{
 				respondPackage.GameTime = gameStartTime.Value;
 				GameTimerClass gameTimer = coopHandler.LocalGameInstance.GameTimer;
