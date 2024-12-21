@@ -49,7 +49,7 @@ namespace Fika.Core.UI.Patches
 			{
 				// byte[] str_1_b = Convert.FromBase64String(str_1);
 				// string str_1_d = Encoding.UTF8.GetString(str_1_b);
-				string str_1_d = "欢迎来到MIYAKO TARKOV！\n\nFika 是一个SPT的合作模组，允许您与朋友一起玩。 如果您为此付了钱，说明你被骗了，Fika是免费的。 您也不允许建立付费或需要捐赠的公共服务器。\n\n等待此消息自动消失来接受Fika的服务条款。";
+				string str_1_d = "欢迎来到MIYAKO TARKOV！\n\nFika 是一个SPT的合作模组，允许您与朋友一起玩。如果您为此付了钱，说明你被骗了，Fika是免费的。 您也不允许建立付费或需要捐赠的公共服务器。\n\nMiyako服特色:\n\n三倍技能升级速度、实验室丧尸活动常驻、专用客户端自带2名AIPMC队友\n\n等待此消息自动消失来接受Fika的服务条款。";
 				Singleton<PreloaderUI>.Instance.ShowFikaMessage($"{ColorizeText(EColor.BLUE, "MIYAKO")} TARKOV", str_1_d, ErrorScreen.EButtonType.QuitButton, 30f,
 					Application.Quit, AcceptTos);
 			}
@@ -57,7 +57,7 @@ namespace Fika.Core.UI.Patches
 			{
 				// byte[] str_2_b = Convert.FromBase64String(str_2);
 				// string str_2_d = Encoding.UTF8.GetString(str_2_b);
-				string str_2_d = "欢迎来到MIYAKO TARKOV！";
+				string str_2_d = "欢迎来到MIYAKO TARKOV！\n\nMiyako服特色:\n\n三倍技能升级速度、实验室丧尸活动常驻、专用客户端自带2名AIPMC队友";
 				Singleton<PreloaderUI>.Instance.ShowFikaMessage($"{ColorizeText(EColor.BLUE, "MIYAKO")} TARKOV", str_2_d, ErrorScreen.EButtonType.OkButton, 60f,
 					null,
 					null);
