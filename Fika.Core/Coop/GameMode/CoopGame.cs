@@ -1,7 +1,6 @@
 ﻿using BepInEx.Logging;
 using Comfort.Common;
 using CommonAssets.Scripts.Game;
-using ComponentAce.Compression.Libs.zlib;
 using EFT;
 using EFT.AssetsManager;
 using EFT.Bots;
@@ -573,7 +572,7 @@ namespace Fika.Core.Coop.GameMode
 			else
 			{
 				FikaServer server = Singleton<FikaServer>.Instance;
-				server.RaidStarted = true;
+				server.HostReady = true;
 
 				DateTime startTime = EFTDateTimeClass.UtcNow.AddSeconds((double)timeBeforeDeployLocal);
 				gameTime = startTime;
@@ -584,7 +583,7 @@ namespace Fika.Core.Coop.GameMode
 				{
 					RaidStarted = RaidStarted,
 					ReadyPlayers = server.ReadyClients,
-					HostReady = server.RaidStarted,
+					HostReady = server.HostReady,
 					GameTime = gameTime.Value,
 					SessionTime = sessionTime.Value
 				};
@@ -618,7 +617,7 @@ namespace Fika.Core.Coop.GameMode
 			{
 				if (FikaPlugin.Instance.EnableTransits)
 				{
-					Logger.LogError("SyncTransitControllers: TransitController was null!"); 
+					Logger.LogError("SyncTransitControllers: TransitController was null!");
 				}
 				return;
 			}
@@ -850,8 +849,10 @@ namespace Fika.Core.Coop.GameMode
 			Func<float> getAimingSensitivity, IStatisticsManager statisticsManager, ISession session,
 			ELocalMode localMode)
 		{
-			bool spawnedInSession = profile.Side == EPlayerSide.Savage || TransitControllerAbstractClass.IsTransit(profile.Id, out int _);
-			profile.SetSpawnedInSession(spawnedInSession);
+			if (!TransitControllerAbstractClass.IsTransit(profile.Id, out int _))
+			{
+				profile.SetSpawnedInSession(false);
+			}
 
 			statisticsManager = FikaBackendUtils.IsDedicated ? new ObservedStatisticsManager() : new GClass1999();
 
@@ -945,7 +946,6 @@ namespace Fika.Core.Coop.GameMode
 				DefaultUIButton backButton = Traverse.Create(menuUI.MatchmakerTimeHasCome).Field<DefaultUIButton>("_cancelButton").Value;
 				GameObject customButton = Instantiate(backButton.gameObject, backButton.gameObject.transform.parent);
 				customButton.gameObject.name = "FikaStartButton";
-				//customButton.gameObject.transform.position = new(customButton.transform.position.x, customButton.transform.position.y - 20, customButton.transform.position.z);
 				customButton.gameObject.SetActive(true);
 				DefaultUIButton backButtonComponent = customButton.GetComponent<DefaultUIButton>();
 				backButtonComponent.SetHeaderText(LocaleUtils.UI_START_RAID.Localized(), 32);
@@ -995,7 +995,6 @@ namespace Fika.Core.Coop.GameMode
 				DefaultUIButton backButton = Traverse.Create(menuUI.MatchmakerTimeHasCome).Field<DefaultUIButton>("_cancelButton").Value;
 				customButton = Instantiate(backButton.gameObject, backButton.gameObject.transform.parent);
 				customButton.gameObject.name = "FikaBackButton";
-				customButton.gameObject.transform.position = new(customButton.transform.position.x, customButton.transform.position.y - 20, customButton.transform.position.z);
 				customButton.gameObject.SetActive(true);
 				DefaultUIButton backButtonComponent = customButton.GetComponent<DefaultUIButton>();
 				backButtonComponent.SetHeaderText("Cancel", 32);
@@ -1153,7 +1152,11 @@ namespace Fika.Core.Coop.GameMode
 			LocationSettingsClass.Location location = localRaidSettings_0.selectedLocation;
 			if (isServer)
 			{
-				HostLootItems = SimpleZlib.CompressToBytes(location.Loot.ToJson([]), 6);
+				GClass1684 lootDescriptor = GClass1685.SerializeLootData(location.Loot, FikaGlobals.SearchControllerSerializer);
+				GClass1198 eftWriter = new();
+				eftWriter.WriteEFTLootDataDescriptor(lootDescriptor);
+				HostLootItems = eftWriter.ToArray();
+
 				await method_11(location);
 			}
 			else
@@ -1224,8 +1227,9 @@ namespace Fika.Core.Coop.GameMode
 		{
 			Profile_0 = null;
 
-			ReconnectPacket reconnectPacket = new(true)
+			ReconnectPacket reconnectPacket = new()
 			{
+				IsRequest = true,
 				InitialRequest = true,
 				ProfileId = profileId
 			};
@@ -1245,8 +1249,9 @@ namespace Fika.Core.Coop.GameMode
 		{
 			SetMatchmakerStatus(LocaleUtils.UI_RECONNECTING.Localized());
 
-			ReconnectPacket reconnectPacket = new(true)
+			ReconnectPacket reconnectPacket = new()
 			{
+				IsRequest = true,
 				ProfileId = ProfileId
 			};
 			FikaClient client = Singleton<FikaClient>.Instance;
@@ -1261,7 +1266,10 @@ namespace Fika.Core.Coop.GameMode
 		private async Task RetrieveLootFromServer(bool register)
 		{
 			FikaClient client = Singleton<FikaClient>.Instance;
-			WorldLootPacket packet = new(true);
+			WorldLootPacket packet = new()
+			{
+				Data = []
+			};
 			do
 			{
 				client.SendData(ref packet, DeliveryMethod.ReliableUnordered);
@@ -1408,7 +1416,7 @@ namespace Fika.Core.Coop.GameMode
 
 				if (startButton != null)
 				{
-					Destroy(startButton); 
+					Destroy(startButton);
 				}
 
 				InformationPacket continuePacket = new()
@@ -1562,7 +1570,7 @@ namespace Fika.Core.Coop.GameMode
 				botsController_0.EventsController.SpawnAction();
 
 				FikaPlugin.DynamicAI.SettingChanged += DynamicAI_SettingChanged;
-				FikaPlugin.DynamicAIRate.SettingChanged += DynamicAIRate_SettingChanged;				
+				FikaPlugin.DynamicAIRate.SettingChanged += DynamicAIRate_SettingChanged;
 			}
 
 			// Add FreeCamController to GameWorld GameObject
@@ -2200,7 +2208,7 @@ namespace Fika.Core.Coop.GameMode
 
 			GClass1924 parameters = new()
 			{
-				profile = new GClass1962(this.Profile_0, GClass1971.Instance).ToUnparsedData(),
+				profile = new GClass1962(Profile_0, FikaGlobals.SearchControllerSerializer).ToUnparsedData(),
 				result = exitStatus,
 				killerId = gparam_0.Player.KillerId,
 				killerAid = gparam_0.Player.KillerAccountId,
@@ -2472,7 +2480,7 @@ namespace Fika.Core.Coop.GameMode
 
 			FikaBackendUtils.RequestFikaWorld = false;
 			FikaBackendUtils.IsReconnect = false;
-			FikaBackendUtils.ReconnectPosition = Vector3.zero;			
+			FikaBackendUtils.ReconnectPosition = Vector3.zero;
 		}
 
 		private class ExitManager : Class1491
@@ -2597,7 +2605,10 @@ namespace Fika.Core.Coop.GameMode
 				}
 				list.Sort(LootCompare);
 
-				return SimpleZlib.CompressToBytes(list.ToJson([]), 6);
+				GClass1684 lootDescriptor = GClass1685.SerializeLootData(list, FikaGlobals.SearchControllerSerializer);
+				GClass1198 eftWriter = new();
+				eftWriter.WriteEFTLootDataDescriptor(lootDescriptor);
+				return eftWriter.ToArray();
 			}
 
 			return HostLootItems;
@@ -2646,6 +2657,7 @@ namespace Fika.Core.Coop.GameMode
 			lootItemPositionClass.IsContainer = lootItem.StaticId != null;
 			lootItemPositionClass.Shift = lootItem.Shift;
 			lootItemPositionClass.PlatformId = num;
+
 			return lootItemPositionClass;
 		}
 

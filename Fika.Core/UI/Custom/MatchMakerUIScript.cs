@@ -152,9 +152,9 @@ namespace Fika.Core.UI.Custom
 				fikaMatchMakerUi.RaidGroupDefaultToClone.SetActive(false);
 			}
 
-			if (fikaMatchMakerUi.PlayerAmountSelection.active)
+			if (fikaMatchMakerUi.DediSelection.active)
 			{
-				fikaMatchMakerUi.PlayerAmountSelection.SetActive(false);
+				fikaMatchMakerUi.DediSelection.SetActive(false);
 			}
 
 			// Ensure the IsSpectator field is reset every time the matchmaker UI is created
@@ -193,22 +193,22 @@ namespace Fika.Core.UI.Custom
 			fikaMatchMakerUi.RaidGroupHostButton.onClick.AddListener(() =>
 			{
 				Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ButtonClick);
-				if (!fikaMatchMakerUi.PlayerAmountSelection.active)
+				if (!fikaMatchMakerUi.DediSelection.active)
 				{
-					fikaMatchMakerUi.PlayerAmountSelection.SetActive(true);
+					fikaMatchMakerUi.DediSelection.SetActive(true);
 				}
 				else
 				{
-					fikaMatchMakerUi.PlayerAmountSelection.SetActive(false);
+					fikaMatchMakerUi.DediSelection.SetActive(false);
 				}
 			});
 
 			fikaMatchMakerUi.CloseButton.onClick.AddListener(() =>
 			{
 				Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ButtonClick);
-				if (fikaMatchMakerUi.PlayerAmountSelection.active)
+				if (fikaMatchMakerUi.DediSelection.active)
 				{
-					fikaMatchMakerUi.PlayerAmountSelection.SetActive(false);
+					fikaMatchMakerUi.DediSelection.SetActive(false);
 				}
 			});
 
@@ -401,19 +401,22 @@ namespace Fika.Core.UI.Custom
 			{
 				int attempts = 0;
 				bool success;
+				bool rejected;
 
 				FikaPlugin.Instance.FikaLogger.LogInfo("Attempting to connect to host session...");
+				string knockMessage = reconnect ? "fika.reconnect" : "fika.hello";
 
 				do
 				{
 					attempts++;
 
-					pingingClient.PingEndPoint("fika.hello");
+					pingingClient.PingEndPoint(knockMessage);
 					pingingClient.NetClient.PollEvents();
 					success = pingingClient.Received;
+					rejected = pingingClient.Rejected;
 
 					yield return new WaitForSeconds(0.1f);
-				} while (!success && attempts < 50);
+				} while (!rejected && !success && attempts < 50);
 
 				if (!success)
 				{
@@ -422,7 +425,12 @@ namespace Fika.Core.UI.Custom
 					LocaleUtils.UI_UNABLE_TO_CONNECT.Localized(),
 					ErrorScreen.EButtonType.OkButton, 10f, null, null);
 
-					FikaPlugin.Instance.FikaLogger.LogError("Unable to connect to the session!");
+					string logError = "Unable to connect to the session!";
+					if (rejected)
+					{
+						logError += " Connection was rejected!";
+					}
+					FikaPlugin.Instance.FikaLogger.LogError(logError);
 
 					if (button != null)
 					{
@@ -537,9 +545,9 @@ namespace Fika.Core.UI.Custom
 				Button button = joinButton.GetComponent<Button>();
 				button.onClick.AddListener(() =>
 				{
-					if (fikaMatchMakerUi.PlayerAmountSelection.active)
+					if (fikaMatchMakerUi.DediSelection.active)
 					{
-						fikaMatchMakerUi.PlayerAmountSelection.SetActive(false);
+						fikaMatchMakerUi.DediSelection.SetActive(false);
 					}
 
 					Singleton<GUISounds>.Instance.PlayUISound(EUISoundType.ButtonClick);

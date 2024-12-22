@@ -165,7 +165,7 @@ namespace Fika.Core.Coop.Players
 			player.cullingHandler.Initialize(player, player.PlayerBones);
 			if (FikaBackendUtils.IsDedicated || profile.IsPlayerProfile())
 			{
-				player.cullingHandler.Disable(); 
+				player.cullingHandler.Disable();
 			}
 
 			if (!aiControl)
@@ -565,8 +565,8 @@ namespace Fika.Core.Coop.Players
 
 		public override void OnHealthEffectAdded(IEffect effect)
 		{
-			// Remember for GClass increments
-			if (gameObject.activeSelf && effect is GInterface294 && FractureSound != null && Singleton<BetterAudio>.Instantiated)
+			// Check for GClass increments
+			if (effect is GInterface304 fracture && !fracture.WasPaused && FractureSound != null && Singleton<BetterAudio>.Instantiated)
 			{
 				Singleton<BetterAudio>.Instance.PlayAtPoint(Position, FractureSound, CameraClass.Instance.Distance(Position),
 					BetterAudio.AudioSourceGroupType.Impacts, 15, 0.7f, EOcclusionTest.Fast, null, false);
@@ -799,7 +799,7 @@ namespace Fika.Core.Coop.Players
 			{
 				ObservedCorpse observedCorpse = CreateCorpse<ObservedCorpse>(CorpseSyncPacket.OverallVelocity);
 				Singleton<GameWorld>.Instance.ObservedPlayersCorpses.Add(observedCorpse.GetNetId(), observedCorpse);
-				return observedCorpse; 
+				return observedCorpse;
 			}
 
 			Corpse corpse = CreateCorpse<Corpse>(CorpseSyncPacket.OverallVelocity);
