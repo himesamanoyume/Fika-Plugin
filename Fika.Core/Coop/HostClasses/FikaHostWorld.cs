@@ -37,33 +37,23 @@ namespace Fika.Core.Coop.HostClasses
 		protected void FixedUpdate()
 		{
 			int grenadesCount = gameWorld.Grenades.Count;
-			if (grenadesCount > 0)
+			for (int i = 0; i < grenadesCount; i++)
 			{
-				for (int i = 0; i < grenadesCount; i++)
-				{
-					Throwable throwable = gameWorld.Grenades.GetByIndex(i);
-					gameWorld.method_2(throwable);
-				}
+				Throwable throwable = gameWorld.Grenades.GetByIndex(i);
+				gameWorld.method_2(throwable);
 			}
-
-			foreach (GStruct131 grenadeStruct in gameWorld.GrenadesCriticalStates)
-			{
-				WorldPacket.ThrowablePackets.Add(grenadeStruct);
-			}
-
-			foreach (GStruct130 artilleryStruct in gameWorld.ArtilleryProjectilesStates)
-			{
-				WorldPacket.ArtilleryPackets.Add(artilleryStruct);
-			}
-
-			gameWorld.GrenadesCriticalStates.Clear();
-			gameWorld.ArtilleryProjectilesStates.Clear();
+			
+			WorldPacket.ThrowablePackets.AddRange(gameWorld.GrenadesCriticalStates);
+			WorldPacket.ArtilleryPackets.AddRange(gameWorld.ArtilleryProjectilesStates);			
 
 			if (WorldPacket.HasData)
 			{
 				server.SendReusableToAll(ref WorldPacket, DeliveryMethod.ReliableOrdered);
 				WorldPacket.Flush();
 			}
+
+			gameWorld.GrenadesCriticalStates.Clear();
+			gameWorld.ArtilleryProjectilesStates.Clear();
 		}
 
 		public void UpdateLootItems(GClass786<int, LootItem> lootItems)
